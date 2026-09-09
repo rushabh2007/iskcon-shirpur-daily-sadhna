@@ -1,0 +1,83 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for checking authentication & roles
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserRole() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) ?
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role : 'mentee';
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        getUserRole() == 'admin' ||
+        (request.auth.token.email != null && (
+          request.auth.token.email == 'rushabhmunot2007@gmail.com' ||
+          request.auth.token.email.matches('.*admin.*')
+        ))
+      );
+    }
+
+    function isMentor() {
+      return isSignedIn() && getUserRole() == 'mentor';
+    }
+
+    // -------------------------------------------------------------
+    // 1. users/{userId}
+    // -------------------------------------------------------------
+    match /users/{userId} {
+      // READ: Allow public read so registering devotees can query active mentors directly from users collection (role == 'mentor') in realtime without login
+      allow read: if true;
+
+      // CREATE: Authenticated users can self-register as 'mentee' or 'admin' (passcode verified). Admin can create any profile.
+      allow create: if (isOwner(userId) && request.resource.data.role in ['mentee', 'admin']) || isAdmin();
+
+      // UPDATE: Owner or Admin
+      allow update: if isOwner(userId) || isAdmin();
+
+      // DELETE: Only Admin
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 2. mentor_profiles/{mentorId} & public_mentors/{mentorId}
+    // -------------------------------------------------------------
+    match /mentor_profiles/{mentorId} {
+      // Public read so registering mentees can select from active mentors
+      allow read: if true;
+      // Only admins or the mentor owner can write/update mentor profiles
+      allow write: if isAdmin() || (isOwner(mentorId) && getUserRole() == 'mentor');
+    }
+
+    match /public_mentors/{mentorId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 3. sadhna_records/{recordId}
+    // -------------------------------------------------------------
+    match /sadhna_records/{recordId} {
+      // READ: Authenticated users can read records for their dashboards, hierarchy reports and Excel exports
+      allow read: if isSignedIn();
+
+      // CREATE: Authenticated users can submit their daily sadhna
+      allow create: if isSignedIn();
+
+      // UPDATE & DELETE: Admin or the devotee owner of the record
+      allow update, delete: if isAdmin() || (
+        isSignedIn() && resource.data.menteeId == request.auth.uid
+      );
+    }
+  }
+}
+

@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FAF8F2"
+    android:fillViewport="true"
+    android:overScrollMode="never"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="36dp"
+        android:paddingBottom="32dp">
+
+        <!-- ISKCON EMBLEM & HEADER -->
+        <ImageView
+            android:id="@+id/ivLoginLogo"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="ISKCON Logo"
+            android:scaleType="fitCenter"
+            android:src="@drawable/logo" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="serif"
+            android:gravity="center"
+            android:text="ISKCON"
+            android:textColor="#111111"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="24dp"
+            android:gravity="center"
+            android:text="Daily Sadhna Portal"
+            android:textColor="#424242"
+            android:textSize="14sp" />
+
+        <!-- MAIN LOGIN CARD -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_white_glass_card"
+            android:elevation="4dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingHorizontal="22dp"
+            android:paddingTop="28dp"
+            android:paddingBottom="26dp">
+
+            <!-- EMAIL / USERNAME LABEL -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="6dp"
+                android:text="Email Address / Username"
+                android:textColor="#212121"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <!-- EMAIL / USERNAME INPUT -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_input_field_light"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="14dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginEnd="12dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_mail_navy" />
+
+                <EditText
+                    android:id="@+id/etEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@null"
+                    android:hint="Enter email address"
+                    android:inputType="textEmailAddress"
+                    android:maxLines="1"
+                    android:textColor="#111111"
+                    android:textColorHint="#757575"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <!-- PASSWORD LABEL -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="6dp"
+                android:text="Password"
+                android:textColor="#212121"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <!-- PASSWORD INPUT WITH TOGGLE EYE -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/bg_input_field_light"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="14dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginEnd="12dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_lock_navy" />
+
+                <EditText
+                    android:id="@+id/etPassword"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@null"
+                    android:hint="Enter password"
+                    android:inputType="textPassword"
+                    android:maxLines="1"
+                    android:textColor="#111111"
+                    android:textColorHint="#757575"
+                    android:textSize="15sp" />
+
+                <ImageView
+                    android:id="@+id/ivTogglePassword"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Toggle password visibility"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_eye_navy" />
+            </LinearLayout>
+
+            <!-- FORGOT PASSWORD LINK -->
+            <TextView
+                android:id="@+id/tvForgotPassword"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginBottom="20dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:padding="6dp"
+                android:text="Forgot Password?"
+                android:textColor="#D84315"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <!-- ERROR MESSAGE -->
+            <TextView
+                android:id="@+id/tvErrorMessage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:gravity="center"
+                android:textColor="#C62828"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <!-- PROGRESS BAR -->
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="14dp"
+                android:indeterminateTint="#E65100"
+                android:visibility="gone" />
+
+            <!-- LOGIN BUTTON -->
+            <Button
+                android:id="@+id/btnLogin"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginBottom="20dp"
+                android:background="@drawable/bg_login_gradient_btn"
+                android:drawableStart="@drawable/ic_login_arrow"
+                android:drawablePadding="8dp"
+                android:elevation="3dp"
+                android:gravity="center"
+                android:paddingHorizontal="24dp"
+                android:text="LOGIN"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <!-- DIVIDER WITH 'OR' -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#D7CCC8" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="12dp"
+                    android:letterSpacing="0.1"
+                    android:text="OR"
+                    android:textColor="#616161"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#D7CCC8" />
+            </LinearLayout>
+
+            <!-- CREATE ACCOUNT BUTTON -->
+            <Button
+                android:id="@+id/btnCreateAccount"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_create_account_btn_light"
+                android:drawableStart="@drawable/ic_person_add_navy"
+                android:drawablePadding="8dp"
+                android:gravity="center"
+                android:paddingHorizontal="20dp"
+                android:text="CREATE NEW ACCOUNT"
+                android:textColor="#E65100"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- SACRED MAHA MANTRA FOOTER -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:gravity="center"
+                android:lineSpacingExtra="4dp"
+                android:text="“Hare Krishna Hare Krishna\nKrishna Krishna Hare Hare\nHare Rama Hare Rama\nRama Rama Hare Rama”"
+                android:textColor="#1B3A4B"
+                android:textSize="14sp"
+                android:textStyle="italic|bold" />
+
+            <ImageView
+                android:layout_width="160dp"
+                android:layout_height="18dp"
+                android:layout_marginTop="10dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_flourish_lotus_amber" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,59 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="800dp"
+    android:viewportWidth="400"
+    android:viewportHeight="800">
+
+    <!-- Subtle lotus petals & divine flute peacock feather watermark motif -->
+    <!-- Base divine aura glow -->
+    <path
+        android:fillColor="#33FF9800"
+        android:pathData="M200,400m-140,0a140,140 0,1 1,280 0a140,140 0,1 1,-280 0" />
+
+    <path
+        android:fillColor="#22E65100"
+        android:pathData="M200,400m-100,0a100,100 0,1 1,200 0a100,100 0,1 1,-200 0" />
+
+    <!-- Radha Krishna Lotus Base & Sacred Flute (Bansuri) Motif -->
+    <!-- Flute shaft -->
+    <path
+        android:fillColor="#448D6E63"
+        android:pathData="M80,360 L320,440 L315,455 L75,375 Z" />
+
+    <!-- Flute holes -->
+    <path
+        android:fillColor="#66FFFFFF"
+        android:pathData="M150,385 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+    <path
+        android:fillColor="#66FFFFFF"
+        android:pathData="M180,395 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+    <path
+        android:fillColor="#66FFFFFF"
+        android:pathData="M210,405 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+    <path
+        android:fillColor="#66FFFFFF"
+        android:pathData="M240,415 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+
+    <!-- Peacock Feather (Mayur Pankh) -->
+    <path
+        android:fillColor="#4400897B"
+        android:pathData="M90,365 C60,320 70,260 110,240 C140,225 170,250 160,290 C150,330 115,355 90,365 Z" />
+    <path
+        android:fillColor="#55039BE5"
+        android:pathData="M95,350 C80,320 85,280 110,265 C130,255 145,270 140,295 C135,320 110,340 95,350 Z" />
+    <path
+        android:fillColor="#66FFB300"
+        android:pathData="M102,335 C95,315 100,290 115,280 C125,275 133,285 130,300 C125,315 110,330 102,335 Z" />
+
+    <!-- Tilak / Divine Lotus Petals -->
+    <path
+        android:fillColor="#33FB8C00"
+        android:pathData="M200,480 C160,530 120,530 110,490 C140,490 170,470 200,480 Z" />
+    <path
+        android:fillColor="#33FB8C00"
+        android:pathData="M200,480 C240,530 280,530 290,490 C260,490 230,470 200,480 Z" />
+    <path
+        android:fillColor="#44E65100"
+        android:pathData="M200,470 C180,520 200,560 200,560 C200,560 220,520 200,470 Z" />
+
+</vector>

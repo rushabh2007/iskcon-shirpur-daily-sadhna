@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootSplashLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FAF8F2"
+    android:fitsSystemWindows="true">
+
+    <!-- CENTER BRANDING CONTAINER -->
+    <LinearLayout
+        android:id="@+id/layoutCenterBranding"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp">
+
+        <!-- LOGO CONTAINER (TRANSPARENT BACKGROUND) -->
+        <FrameLayout
+            android:id="@+id/flLogoContainer"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginBottom="24dp">
+
+            <ImageView
+                android:id="@+id/ivSplashLogo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:contentDescription="ISKCON Logo"
+                android:scaleType="fitCenter"
+                android:src="@drawable/logo" />
+        </FrameLayout>
+
+        <!-- APP TITLE -->
+        <TextView
+            android:id="@+id/tvSplashTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="serif"
+            android:gravity="center"
+            android:letterSpacing="0.02"
+            android:text="ISKCON"
+            android:textColor="#111111"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <!-- GOLDEN FLOURISH DIVIDER -->
+        <ImageView
+            android:id="@+id/ivSplashFlourish"
+            android:layout_width="140dp"
+            android:layout_height="16dp"
+            android:layout_marginVertical="10dp"
+            android:contentDescription="Decorative Golden Flourish"
+            android:src="@drawable/ic_flourish_lotus_amber" />
+
+        <!-- SUBTITLE -->
+        <TextView
+            android:id="@+id/tvSplashSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:letterSpacing="0.08"
+            android:text="Daily Sadhna"
+            android:textColor="#E65100"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <!-- FOOTER MAHAMANTRA -->
+    <LinearLayout
+        android:id="@+id/layoutSplashFooter"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="32dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp">
+
+        <TextView
+            android:id="@+id/tvMahaMantra"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:letterSpacing="0.04"
+            android:text="हरे कृष्ण हरे कृष्ण कृष्ण कृष्ण हरे हरे\nहरे राम हरे राम राम राम हरे हरे"
+            android:textColor="#8D6E63"
+            android:textSize="12sp"
+            android:textStyle="italic" />
+
+        <TextView
+            android:id="@+id/tvSplashDevelopedBy"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:gravity="center"
+            android:letterSpacing="0.06"
+            android:text="Developed by ISKCON SHIRPUR"
+            android:textColor="#8D6E63"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+</RelativeLayout>

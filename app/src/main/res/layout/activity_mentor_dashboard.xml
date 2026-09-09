@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#FAF8F2"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="28dp"
+        android:paddingBottom="36dp">
+
+        <!-- HEADER -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:id="@+id/ivMentorIskconLogo"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="12dp"
+                android:contentDescription="ISKCON Logo"
+                android:scaleType="fitCenter"
+                android:src="@drawable/logo" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="serif"
+                    android:text="ISKCON"
+                    android:textColor="#D8232A"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvMentorWelcome"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Welcome, Counsellor"
+                    android:textColor="#333333"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnLogout"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="Logout"
+                android:textColor="#C62828"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- TABS ROW: 1. COUNSELLEES | 2. COUNSELLEES SADHNA -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#F0ECE1"
+            android:orientation="horizontal"
+            android:padding="4dp"
+            android:layout_marginBottom="16dp">
+
+            <Button
+                android:id="@+id/btnMentorTabMentees"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="2dp"
+                android:layout_weight="1"
+                android:backgroundTint="#E65100"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="MY COUNSELLEES"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnMentorTabMenteesSadhna"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="2dp"
+                android:layout_weight="1"
+                android:backgroundTint="#FFFFFF"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="COUNSELLEES SADHNA"
+                android:textColor="#424242"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/pbMentorLoading"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="12dp"
+            android:indeterminateTint="#E65100"
+            android:visibility="gone" />
+
+        <!-- SECTION 1: ASSIGNED COUNSELLEES -->
+        <LinearLayout
+            android:id="@+id/layoutMentorSectionMentees"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="visible">
+
+            <TextView
+                android:id="@+id/tvMenteesHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="My Assigned Counsellees (0)"
+                android:textColor="#111111"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="Tap any devotee to view complete profile and Sadhna history"
+                android:textColor="#757575"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:id="@+id/layoutMenteesList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <!-- SECTION 2: COUNSELLEES SADHNA SUBMISSIONS -->
+        <LinearLayout
+            android:id="@+id/layoutMentorSectionMenteesSadhna"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:id="@+id/tvSadhnaRecordsHeader"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Counsellees Sadhna (0)"
+                    android:textColor="#111111"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btnExportMenteesSadhna"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:minHeight="36dp"
+                    android:backgroundTint="#E8F5E9"
+                    android:text="📊 Export Excel"
+                    android:textColor="#2E7D32"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutSadhnaList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <!-- SECTION 3: MENTOR'S OWN SADHNA HISTORY -->
+        <LinearLayout
+            android:id="@+id/layoutMentorSectionMySadhna"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:id="@+id/tvMentorMySadhnaHeader"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="My Sadhna Submissions (0)"
+                    android:textColor="#111111"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btnExportMentorMySadhna"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:minHeight="36dp"
+                    android:backgroundTint="#E8F5E9"
+                    android:text="📊 Export Excel"
+                    android:textColor="#2E7D32"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutMentorMySadhnaList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    </ScrollView>
+
+    <!-- FLOATING ACTION BUTTON: ADD DAILY SADHNA -->
+    <TextView
+        android:id="@+id/fabAddSadhna"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="20dp"
+        android:background="@drawable/bg_fab_plus"
+        android:clickable="true"
+        android:contentDescription="Add Sadhna"
+        android:elevation="6dp"
+        android:focusable="true"
+        android:gravity="center"
+        android:text="+"
+        android:textColor="#FFFFFF"
+        android:textSize="32sp"
+        android:textStyle="bold" />
+
+</FrameLayout>
