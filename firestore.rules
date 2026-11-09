@@ -12,50 +12,109 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function getUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function getUserRole() {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid)) ?
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role : 'mentee';
+        getUserDoc().data.get('role', 'mentee') : 'mentee';
+    }
+
+    function getUserOrg() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) ?
+        (getUserDoc().data.get('organizationId', 'shirpur')) : 'shirpur';
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email in ['iskconshirpur@gmail.com', 'rushabhmunot2007@gmail.com'] ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         getUserDoc().data.get('role', '') in ['super_admin', 'superadmin', 'SuperAdmin'])
+      );
+    }
+
+    function isMainAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'admin1@gmail.com' ||
+        getUserOrg() == 'shirpur' ||
+        isSuperAdmin()
+      );
     }
 
     function isAdmin() {
       return isSignedIn() && (
-        getUserRole() == 'admin' ||
-        (request.auth.token.email != null && (
-          request.auth.token.email == 'rushabhmunot2007@gmail.com' ||
-          request.auth.token.email.matches('.*admin.*')
-        ))
+        getUserRole() in ['admin', 'Admin', 'super_admin', 'superadmin'] ||
+        isSuperAdmin() ||
+        isMainAdmin() ||
+        (request.auth.token.email != null && request.auth.token.email.matches('.*admin.*'))
       );
     }
 
     function isMentor() {
-      return isSignedIn() && getUserRole() == 'mentor';
+      return isSignedIn() && (getUserRole() in ['mentor', 'counsellor', 'Mentor', 'Counsellor']);
+    }
+
+    // Check if document belongs to the same organization as the requesting user (defaults to 'shirpur' for legacy docs)
+    function isSameOrg(docData) {
+      return isSuperAdmin() || (docData.get('organizationId', docData.get('orgId', 'shirpur')) == getUserOrg());
+    }
+
+    // -------------------------------------------------------------
+    // 0. organizations/{orgId}
+    // -------------------------------------------------------------
+    match /organizations/{orgId} {
+      // Allow read/get on organization documents, and listing active organizations
+      allow get: if true;
+      allow list: if resource.data.active == true || isSuperAdmin();
+      // ONLY Super Admin can create or modify organizations
+      allow write: if isSuperAdmin();
     }
 
     // -------------------------------------------------------------
     // 1. users/{userId}
     // -------------------------------------------------------------
     match /users/{userId} {
-      // READ: Allow public read so registering devotees can query active mentors directly from users collection (role == 'mentor') in realtime without login
-      allow read: if true;
+      // READ:
+      // - Devotee reading their own profile
+      // - Unauthenticated registration reading active mentors
+      // - Authenticated users (Admin/Mentor/Mentee) reading users in their SAME organization
+      // - Super Admin can view all
+      allow read: if isOwner(userId) ||
+                     isSuperAdmin() ||
+                     (resource.data.role in ['mentor', 'counsellor', 'Mentor', 'Counsellor']) ||
+                     (isSignedIn() && isSameOrg(resource.data));
 
-      // CREATE: Authenticated users can self-register as 'mentee' or 'admin' (passcode verified). Admin can create any profile.
-      allow create: if (isOwner(userId) && request.resource.data.role in ['mentee', 'admin']) || isAdmin();
+      // CREATE: Authenticated users self-register as 'mentee'/'counselee' or 'admin', or Admin creates inside their org
+      allow create: if (isOwner(userId) && request.resource.data.role in ['mentee', 'counselee', 'admin']) ||
+                       (isAdmin() && (isSameOrg(request.resource.data) || isMainAdmin())) ||
+                       isSuperAdmin();
 
-      // UPDATE: Owner or Admin
-      allow update: if isOwner(userId) || isAdmin();
+      // UPDATE: Owner (cannot self-assign mentorId unless Admin), Admin of same org, or Counsellor assigning mentorId to themselves upon approval
+      allow update: if (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['mentorId', 'role']) || isAdmin())) ||
+                       (isAdmin() && isSameOrg(resource.data)) ||
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mentorId']) ||
+                       isSuperAdmin();
 
-      // DELETE: Only Admin
-      allow delete: if isAdmin();
+      // DELETE: Only Admin of the same organization
+      allow delete: if isAdmin() && isSameOrg(resource.data);
     }
 
     // -------------------------------------------------------------
-    // 2. mentor_profiles/{mentorId} & public_mentors/{mentorId}
+    // 2. counsellor_requests/{requestId}
+    // -------------------------------------------------------------
+    match /counsellor_requests/{requestId} {
+      allow read, write: if true;
+    }
+
+    // -------------------------------------------------------------
+    // 3. mentor_profiles/{mentorId} & public_mentors/{mentorId}
     // -------------------------------------------------------------
     match /mentor_profiles/{mentorId} {
       // Public read so registering mentees can select from active mentors
       allow read: if true;
-      // Only admins or the mentor owner can write/update mentor profiles
-      allow write: if isAdmin() || (isOwner(mentorId) && getUserRole() == 'mentor');
+      // Only admins of same organization or the mentor owner can write/update mentor profiles
+      allow write: if isAdmin() || (isOwner(mentorId) && isMentor());
     }
 
     match /public_mentors/{mentorId} {
@@ -64,20 +123,39 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------
-    // 3. sadhna_records/{recordId}
+    // 4. sadhna_records/{recordId}
     // -------------------------------------------------------------
     match /sadhna_records/{recordId} {
-      // READ: Authenticated users can read records for their dashboards, hierarchy reports and Excel exports
-      allow read: if isSignedIn();
-
-      // CREATE: Authenticated users can submit their daily sadhna
-      allow create: if isSignedIn();
-
-      // UPDATE & DELETE: Admin or the devotee owner of the record
-      allow update, delete: if isAdmin() || (
-        isSignedIn() && resource.data.menteeId == request.auth.uid
+      // READ: Devotee owner, assigned Counsellor, Admin of same org, Super Admin, or users within same organization
+      allow read: if isSignedIn() && (
+        resource.data.menteeId == request.auth.uid ||
+        resource.data.mentorId == request.auth.uid ||
+        isAdmin() ||
+        isSuperAdmin() ||
+        isSameOrg(resource.data)
       );
+
+      // CREATE: Authenticated users can submit their own daily sadhna, or Admin within their organization
+      allow create: if isSignedIn() && (
+        request.resource.data.menteeId == request.auth.uid ||
+        (isAdmin() && isSameOrg(request.resource.data)) ||
+        isSuperAdmin()
+      );
+
+      // UPDATE & DELETE: Devotee owner of the record, Admin of the same organization, or Super Admin
+      allow update, delete: if isSignedIn() && (
+        resource.data.menteeId == request.auth.uid ||
+        (isAdmin() && isSameOrg(resource.data)) ||
+        isSuperAdmin()
+      );
+    }
+
+    // -------------------------------------------------------------
+    // 5. system_settings/{docId}
+    // -------------------------------------------------------------
+    match /system_settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (isAdmin() || isSuperAdmin());
     }
   }
 }
-

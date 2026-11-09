@@ -47,6 +47,7 @@ class MenteeSubDashboardActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_mentee_sub_dashboard)
+    findViewById<View>(R.id.rootMenteeSubDashboardLayout)?.let { InsetUtils.applySafeTopSpacing(it) }
 
     btnBack = findViewById(R.id.btnBack)
     btnExportMenteeSubExcel = findViewById(R.id.btnExportMenteeSubExcel)

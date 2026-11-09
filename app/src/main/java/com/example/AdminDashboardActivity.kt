@@ -42,10 +42,12 @@ class AdminDashboardActivity : ComponentActivity() {
   // Tab Buttons
   private lateinit var btnTabMentors: Button
   private lateinit var btnTabSadhna: Button
+  private lateinit var btnTabMyAdminSadhna: Button
 
   // Section Layouts
   private lateinit var layoutSectionMentors: LinearLayout
   private lateinit var layoutSectionSadhna: LinearLayout
+  private lateinit var layoutSectionMyAdminSadhna: LinearLayout
 
   // Section 1: Mentors Views
   private lateinit var tvMentorsHeader: TextView
@@ -63,6 +65,15 @@ class AdminDashboardActivity : ComponentActivity() {
   private lateinit var btnExportSadhnaSection: Button
   private lateinit var layoutAdminSadhnaList: LinearLayout
 
+  // Section 3: My Admin Sadhna Views
+  private lateinit var tvAdminMySadhnaSubCount: TextView
+  private lateinit var btnRecordAdminSadhna: Button
+  private lateinit var btnExportMyAdminSadhna: Button
+  private lateinit var spinnerMyAdminMonthFilter: Spinner
+  private lateinit var btnFilterMyAdminDate: Button
+  private lateinit var btnClearMyAdminFilter: Button
+  private lateinit var layoutAdminMySadhnaList: LinearLayout
+
   // State & Data
   private var usersListener: ListenerRegistration? = null
   private var sadhnaListener: ListenerRegistration? = null
@@ -75,11 +86,18 @@ class AdminDashboardActivity : ComponentActivity() {
   private var selectedMentorFilterId: String? = null
   private var selectedMenteeFilterId: String? = null
   private var selectedDateFilter: String? = null
-  private var activeSection = 1 // 1: Counsellors, 2: Sadhna
+  private var selectedAdminMonthFilterIdx: Int = 0
+  private var selectedAdminDateFilter: String? = null
+  private var activeSection = 1 // 1: Counsellors, 2: Sadhna, 3: My Admin Sadhna
+
+  private var adminOrgId: String = SessionManager.DEFAULT_ORG_ID
+  private var adminOrgName: String = SessionManager.DEFAULT_ORG_NAME
+  private var currentAdminEmail: String = ""
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_admin_dashboard)
+    findViewById<View>(R.id.rootAdminDashboardLayout)?.let { InsetUtils.applySafeTopSpacing(it) }
 
     initViews()
     setupTabNavigation()
@@ -87,18 +105,45 @@ class AdminDashboardActivity : ComponentActivity() {
 
     val profile = SessionManager.getSavedProfile(this)
     val name = profile?.name ?: "Administrator"
-    tvAdminWelcome.text = "Hare Krishna, HG $name"
+    currentAdminEmail = profile?.email ?: ""
+    adminOrgId = profile?.organizationId?.ifEmpty { SessionManager.DEFAULT_ORG_ID } ?: SessionManager.DEFAULT_ORG_ID
+    adminOrgName = profile?.organizationName?.ifEmpty { SessionManager.getOrgName(adminOrgId) } ?: SessionManager.getOrgName(adminOrgId)
+    tvAdminWelcome.text = "Hare Krishna, HG $name • $adminOrgName"
 
     btnLogout.setOnClickListener {
       performLogout()
     }
 
     btnExportExcel.setOnClickListener {
-      showExportExcelDialog()
+      val mentorMap = allMentors.associateBy { it.id }
+      val menteeMap = allMentees.associateBy { it.id }
+      val adminProfile = SessionManager.getSavedProfile(this)
+      val adminUid = adminProfile?.id ?: ""
+      val adminName = adminProfile?.name ?: "Admin"
+
+      MonthlyExcelExportDialog.show(
+        activity = this,
+        allRecords = allSadhnaRecords,
+        userRole = "admin",
+        currentUserId = adminUid,
+        currentUserName = adminName,
+        allDevotees = allMentees,
+        mentorMap = mentorMap,
+        menteeMap = menteeMap
+      )
+    }
+
+    findViewById<View>(R.id.btnSadhnaDataManagement)?.setOnClickListener {
+      showSadhnaDataManagementDialog()
     }
 
     btnManageAdmins.setOnClickListener {
       showManageAdminsDialog()
+    }
+
+    findViewById<View>(R.id.btnAdminReminders)?.setOnClickListener {
+      val intent = Intent(this, SadhnaRemindersActivity::class.java)
+      startActivity(intent)
     }
 
     btnAddNewMentor.setOnClickListener {
@@ -111,7 +156,7 @@ class AdminDashboardActivity : ComponentActivity() {
 
     startRealtimeListeners()
 
-    SadhnaReminderManager.scheduleDailyReminder(this)
+    SadhnaReminderManager.scheduleAllReminders(this)
     SadhnaReminderManager.requestNotificationPermissionIfNeeded(this)
   }
 
@@ -132,9 +177,11 @@ class AdminDashboardActivity : ComponentActivity() {
 
     btnTabMentors = findViewById(R.id.btnTabMentors)
     btnTabSadhna = findViewById(R.id.btnTabSadhna)
+    btnTabMyAdminSadhna = findViewById(R.id.btnTabMyAdminSadhna)
 
     layoutSectionMentors = findViewById(R.id.layoutSectionMentors)
     layoutSectionSadhna = findViewById(R.id.layoutSectionSadhna)
+    layoutSectionMyAdminSadhna = findViewById(R.id.layoutSectionMyAdminSadhna)
 
     tvMentorsHeader = findViewById(R.id.tvMentorsHeader)
     tvMentorsSubCount = findViewById(R.id.tvMentorsSubCount)
@@ -158,8 +205,55 @@ class AdminDashboardActivity : ComponentActivity() {
     btnExportSadhnaSection = findViewById(R.id.btnExportSadhnaSection)
     layoutAdminSadhnaList = findViewById(R.id.layoutAdminSadhnaList)
 
+    // Section 3: My Admin Sadhna Views
+    tvAdminMySadhnaSubCount = findViewById(R.id.tvAdminMySadhnaSubCount)
+    btnRecordAdminSadhna = findViewById(R.id.btnRecordAdminSadhna)
+    btnExportMyAdminSadhna = findViewById(R.id.btnExportMyAdminSadhna)
+    spinnerMyAdminMonthFilter = findViewById(R.id.spinnerMyAdminMonthFilter)
+    btnFilterMyAdminDate = findViewById(R.id.btnFilterMyAdminDate)
+    btnClearMyAdminFilter = findViewById(R.id.btnClearMyAdminFilter)
+    layoutAdminMySadhnaList = findViewById(R.id.layoutAdminMySadhnaList)
+
+    btnRecordAdminSadhna.setOnClickListener {
+      val intent = Intent(this, DailySadhnaActivity::class.java)
+      startActivity(intent)
+    }
+
+    btnExportMyAdminSadhna.setOnClickListener {
+      val mentorMap = allMentors.associateBy { it.id }
+      val menteeMap = allMentees.associateBy { it.id }
+      val adminProfile = SessionManager.getSavedProfile(this)
+      val adminUid = adminProfile?.id ?: ""
+      val adminName = adminProfile?.name ?: "Admin"
+
+      MonthlyExcelExportDialog.show(
+        activity = this,
+        allRecords = allSadhnaRecords.filter { it.menteeId == adminUid },
+        userRole = "mentee",
+        currentUserId = adminUid,
+        currentUserName = adminName,
+        mentorMap = mentorMap,
+        menteeMap = menteeMap
+      )
+    }
+
     btnExportSadhnaSection.setOnClickListener {
-      showExportExcelDialog()
+      val mentorMap = allMentors.associateBy { it.id }
+      val menteeMap = allMentees.associateBy { it.id }
+      val adminProfile = SessionManager.getSavedProfile(this)
+      val adminUid = adminProfile?.id ?: ""
+      val adminName = adminProfile?.name ?: "Admin"
+
+      MonthlyExcelExportDialog.show(
+        activity = this,
+        allRecords = allSadhnaRecords,
+        userRole = "admin",
+        currentUserId = adminUid,
+        currentUserName = adminName,
+        allDevotees = allMentees,
+        mentorMap = mentorMap,
+        menteeMap = menteeMap
+      )
     }
 
     findViewById<View>(R.id.fabAddSadhna)?.setOnClickListener {
@@ -168,12 +262,35 @@ class AdminDashboardActivity : ComponentActivity() {
     }
   }
 
+  private fun showSadhnaDataManagementDialog() {
+    val mentorMap = allMentors.associateBy { it.id }
+    val menteeMap = allMentees.associateBy { it.id }
+    val adminProfile = SessionManager.getSavedProfile(this)
+    val adminName = adminProfile?.name ?: "Admin"
+
+    SadhnaDataManagementDialog.show(
+      activity = this,
+      allSadhnaRecords = allSadhnaRecords,
+      allDevotees = allMentees,
+      adminOrgId = adminOrgId,
+      adminName = adminName,
+      mentorMap = mentorMap,
+      menteeMap = menteeMap,
+      onRecordsDeleted = { count ->
+        Toast.makeText(this, "Updated dashboard: $count records removed.", Toast.LENGTH_SHORT).show()
+      }
+    )
+  }
+
   private fun setupTabNavigation() {
     btnTabMentors.setOnClickListener {
       switchSection(1)
     }
     btnTabSadhna.setOnClickListener {
       switchSection(2)
+    }
+    btnTabMyAdminSadhna.setOnClickListener {
+      switchSection(3)
     }
   }
 
@@ -192,9 +309,17 @@ class AdminDashboardActivity : ComponentActivity() {
     btnTabSadhna.backgroundTintList = ColorStateList.valueOf(if (section == 2) colorActive else colorInactive)
     btnTabSadhna.setTextColor(if (section == 2) textActive else textInactive)
 
+    btnTabMyAdminSadhna.backgroundTintList = ColorStateList.valueOf(if (section == 3) colorActive else colorInactive)
+    btnTabMyAdminSadhna.setTextColor(if (section == 3) textActive else textInactive)
+
     // Visibility
     layoutSectionMentors.visibility = if (section == 1) View.VISIBLE else View.GONE
     layoutSectionSadhna.visibility = if (section == 2) View.VISIBLE else View.GONE
+    layoutSectionMyAdminSadhna.visibility = if (section == 3) View.VISIBLE else View.GONE
+
+    if (section == 3) {
+      renderAdminMySadhnaSection()
+    }
   }
 
   private fun setupFilterListeners() {
@@ -225,6 +350,47 @@ class AdminDashboardActivity : ComponentActivity() {
       applySadhnaFilters()
     }
 
+    val monthNames = arrayOf(
+      "All Months",
+      "01 - January", "02 - February", "03 - March", "04 - April",
+      "05 - May", "06 - June", "07 - July", "08 - August",
+      "09 - September", "10 - October", "11 - November", "12 - December"
+    )
+    val adminMonthAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, monthNames)
+    spinnerMyAdminMonthFilter.adapter = adminMonthAdapter
+
+    spinnerMyAdminMonthFilter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+      override fun onItemSelected(p0: AdapterView<*>?, p1: View?, position: Int, p3: Long) {
+        selectedAdminMonthFilterIdx = position
+        renderAdminMySadhnaSection()
+      }
+      override fun onNothingSelected(p0: AdapterView<*>?) {}
+    }
+
+    btnFilterMyAdminDate.setOnClickListener {
+      val calendar = Calendar.getInstance()
+      DatePickerDialog(
+        this,
+        { _, year, month, dayOfMonth ->
+          val formattedDate = String.format(Locale.getDefault(), "%02d/%02d/%04d", dayOfMonth, month + 1, year)
+          selectedAdminDateFilter = formattedDate
+          btnFilterMyAdminDate.text = "📅 $formattedDate"
+          renderAdminMySadhnaSection()
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+      ).show()
+    }
+
+    btnClearMyAdminFilter.setOnClickListener {
+      selectedAdminDateFilter = null
+      selectedAdminMonthFilterIdx = 0
+      btnFilterMyAdminDate.text = "📅 Pick Date"
+      spinnerMyAdminMonthFilter.setSelection(0)
+      renderAdminMySadhnaSection()
+    }
+
     spinnerFilterMentor.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
       override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
         selectedMentorFilterId = if (position == 0) null else {
@@ -237,8 +403,12 @@ class AdminDashboardActivity : ComponentActivity() {
 
     spinnerFilterMentee.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
       override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-        selectedMenteeFilterId = if (position == 0) null else {
-          allMentees.getOrNull(position - 1)?.id
+        val adminProfile = SessionManager.getSavedProfile(this@AdminDashboardActivity)
+        val adminUid = adminProfile?.id
+        selectedMenteeFilterId = when (position) {
+          0 -> null
+          1 -> adminUid
+          else -> allMentees.getOrNull(position - 2)?.id
         }
         applySadhnaFilters()
       }
@@ -249,9 +419,10 @@ class AdminDashboardActivity : ComponentActivity() {
   private fun startRealtimeListeners() {
     pbAdminLoading.visibility = View.VISIBLE
 
-    // 1. Listen to all users
+    // 1. Listen to all users scoped by organization
     usersListener?.remove()
     usersListener = SessionManager.listenToAllUsers(
+      organizationId = adminOrgId,
       onUpdate = { users ->
         pbAdminLoading.visibility = View.GONE
         allMentors.clear()
@@ -260,8 +431,8 @@ class AdminDashboardActivity : ComponentActivity() {
 
         for (u in users) {
           when (u.role.lowercase(Locale.getDefault())) {
-            "mentor" -> allMentors.add(u)
-            "mentee" -> allMentees.add(u)
+            "mentor", "counsellor" -> allMentors.add(u)
+            "mentee", "counselee" -> allMentees.add(u)
             "admin" -> allAdmins.add(u)
             else -> allMentees.add(u)
           }
@@ -274,6 +445,7 @@ class AdminDashboardActivity : ComponentActivity() {
         renderMentorsSection()
         updateFilterSpinners()
         applySadhnaFilters()
+        renderAdminMySadhnaSection()
 
         // Sync active counsellors to public mentor_profiles collection in background
         if (allMentors.isNotEmpty()) {
@@ -286,13 +458,15 @@ class AdminDashboardActivity : ComponentActivity() {
       }
     )
 
-    // 2. Listen to all Sadhna records
+    // 2. Listen to all Sadhna records scoped by organization
     sadhnaListener?.remove()
     sadhnaListener = SessionManager.listenToAllSadhnaRecords(
+      organizationId = adminOrgId,
       onUpdate = { records ->
         allSadhnaRecords.clear()
         allSadhnaRecords.addAll(records.sortedByDescending { it.date })
         applySadhnaFilters()
+        renderAdminMySadhnaSection()
       },
       onError = { e ->
         Toast.makeText(this, "Error loading sadhna records: ${SessionManager.formatErrorMessage(e)}", Toast.LENGTH_SHORT).show()
@@ -307,8 +481,10 @@ class AdminDashboardActivity : ComponentActivity() {
     val mentorAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, mentorOptions)
     spinnerFilterMentor.adapter = mentorAdapter
 
-    // Mentee filter spinner
-    val menteeOptions = mutableListOf("All Counsellees (${allMentees.size})")
+    // Mentee filter spinner (Includes Admin's Own Sadhna option)
+    val adminProfile = SessionManager.getSavedProfile(this)
+    val adminName = adminProfile?.name ?: "Admin"
+    val menteeOptions = mutableListOf("All Devotees (${allMentees.size})", "👑 My Own Sadhna (HG $adminName)")
     menteeOptions.addAll(allMentees.map { it.name })
     val menteeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, menteeOptions)
     spinnerFilterMentee.adapter = menteeAdapter
@@ -406,24 +582,25 @@ class AdminDashboardActivity : ComponentActivity() {
     }
     container.addView(emailTv)
 
-    // Action Buttons Row: [ Sub-Dashboard ] [ Edit ] [ Delete ]
-    val actionsRow = LinearLayout(this).apply {
+    // Action Buttons Rows
+    val actionsRow1 = LinearLayout(this).apply {
       orientation = LinearLayout.HORIZONTAL
       layoutParams = LinearLayout.LayoutParams(
         LinearLayout.LayoutParams.MATCH_PARENT,
         LinearLayout.LayoutParams.WRAP_CONTENT
       ).apply {
         topMargin = 12
+        bottomMargin = 6
       }
     }
 
     val btnSubDash = Button(this).apply {
-      text = "View Counsellees (${assignedMentees.size}) ➔"
+      text = "👥 Counsellees (${assignedMentees.size}) ➔"
       textSize = 11f
       minHeight = 36
       setBackgroundColor(Color.parseColor("#E65100"))
       setTextColor(Color.WHITE)
-      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f).apply {
+      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
         rightMargin = 4
       }
       layoutParams = p
@@ -432,14 +609,40 @@ class AdminDashboardActivity : ComponentActivity() {
       }
     }
 
-    val btnEdit = Button(this).apply {
-      text = "Edit"
+    val btnCounsellorSadhna = Button(this).apply {
+      text = "📿 Counsellor's Sadhna ➔"
       textSize = 11f
       minHeight = 36
       setBackgroundColor(Color.parseColor("#00695C"))
       setTextColor(Color.WHITE)
-      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f).apply {
+      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
         leftMargin = 4
+      }
+      layoutParams = p
+      setOnClickListener {
+        showCounsellorSadhnaDialog(mentor)
+      }
+    }
+
+    actionsRow1.addView(btnSubDash)
+    actionsRow1.addView(btnCounsellorSadhna)
+    container.addView(actionsRow1)
+
+    val actionsRow2 = LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+      )
+    }
+
+    val btnEdit = Button(this).apply {
+      text = "✏️ Edit"
+      textSize = 11f
+      minHeight = 36
+      setBackgroundColor(Color.parseColor("#4527A0"))
+      setTextColor(Color.WHITE)
+      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
         rightMargin = 4
       }
       layoutParams = p
@@ -449,12 +652,12 @@ class AdminDashboardActivity : ComponentActivity() {
     }
 
     val btnDelete = Button(this).apply {
-      text = "Delete"
+      text = "🗑️ Delete"
       textSize = 11f
       minHeight = 36
       setBackgroundColor(Color.parseColor("#D32F2F"))
       setTextColor(Color.WHITE)
-      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f).apply {
+      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
         leftMargin = 4
       }
       layoutParams = p
@@ -463,10 +666,9 @@ class AdminDashboardActivity : ComponentActivity() {
       }
     }
 
-    actionsRow.addView(btnSubDash)
-    actionsRow.addView(btnEdit)
-    actionsRow.addView(btnDelete)
-    container.addView(actionsRow)
+    actionsRow2.addView(btnEdit)
+    actionsRow2.addView(btnDelete)
+    container.addView(actionsRow2)
 
     return container
   }
@@ -1018,7 +1220,7 @@ class AdminDashboardActivity : ComponentActivity() {
 
         pbAdminLoading.visibility = View.VISIBLE
         lifecycleScope.launch {
-          val result = SessionManager.addMentor(this@AdminDashboardActivity, name, email, password)
+          val result = SessionManager.addMentor(this@AdminDashboardActivity, name, email, password, adminOrgId, adminOrgName)
           pbAdminLoading.visibility = View.GONE
           if (result.isSuccess) {
             Toast.makeText(this@AdminDashboardActivity, "Counsellor HG $name created successfully!", Toast.LENGTH_SHORT).show()
@@ -1086,7 +1288,7 @@ class AdminDashboardActivity : ComponentActivity() {
 
         pbAdminLoading.visibility = View.VISIBLE
         lifecycleScope.launch {
-          val result = SessionManager.addMentee(this@AdminDashboardActivity, name, email, password, mentorId)
+          val result = SessionManager.addMentee(this@AdminDashboardActivity, name, email, password, mentorId, adminOrgId, adminOrgName)
           pbAdminLoading.visibility = View.GONE
           if (result.isSuccess) {
             Toast.makeText(this@AdminDashboardActivity, "Devotee $name created successfully!", Toast.LENGTH_SHORT).show()
@@ -1370,6 +1572,10 @@ class AdminDashboardActivity : ComponentActivity() {
   }
 
   private fun showAddAdminDialog() {
+    showAddAdminForCurrentOrgDialog()
+  }
+
+  private fun showAddAdminForCurrentOrgDialog() {
     val layout = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       setPadding(50, 30, 50, 10)
@@ -1392,7 +1598,7 @@ class AdminDashboardActivity : ComponentActivity() {
     layout.addView(etPassword)
 
     AlertDialog.Builder(this)
-      .setTitle("Add New Administrator")
+      .setTitle("Add Administrator for $adminOrgName")
       .setView(layout)
       .setPositiveButton("Create Admin") { _, _ ->
         val name = etName.text.toString().trim()
@@ -1406,7 +1612,7 @@ class AdminDashboardActivity : ComponentActivity() {
 
         pbAdminLoading.visibility = View.VISIBLE
         lifecycleScope.launch {
-          val result = SessionManager.addAdmin(this@AdminDashboardActivity, name, email, password)
+          val result = SessionManager.addAdmin(this@AdminDashboardActivity, name, email, password, adminOrgId, adminOrgName)
           pbAdminLoading.visibility = View.GONE
           if (result.isSuccess) {
             Toast.makeText(this@AdminDashboardActivity, "Administrator $name added successfully!", Toast.LENGTH_SHORT).show()
@@ -1441,7 +1647,7 @@ class AdminDashboardActivity : ComponentActivity() {
 
   private fun performLogout() {
     SessionManager.clearSession(this)
-    val intent = Intent(this, LoginActivity::class.java)
+    val intent = Intent(this, SelectOrganizationActivity::class.java)
     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
     startActivity(intent)
     finish()
@@ -1900,8 +2106,8 @@ class AdminDashboardActivity : ComponentActivity() {
           // If in-memory list hasn't finished loading yet, direct fetch from Firestore
           pbAdminLoading.visibility = View.VISIBLE
           lifecycleScope.launch {
-            val directFetch = SessionManager.fetchAllSadhnaRecordsDirectly()
-            val directUsers = SessionManager.fetchAllUsersDirectly()
+            val directFetch = SessionManager.fetchAllSadhnaRecordsDirectly(adminOrgId)
+            val directUsers = SessionManager.fetchAllUsersDirectly(adminOrgId)
             pbAdminLoading.visibility = View.GONE
 
             if (directFetch.isSuccess) {
@@ -2144,6 +2350,784 @@ class AdminDashboardActivity : ComponentActivity() {
     root.addView(btnDone)
 
     dialog.setContentView(root)
+    dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+    dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    dialog.show()
+  }
+
+  // =========================================================================
+  // DATE MATCHING HELPERS
+  // =========================================================================
+  private fun matchesMonthYear(dateStr: String, monthIdx: Int, year: Int?): Boolean {
+    if (monthIdx == 0 && year == null) return true
+    val parsed = parseDateComponents(dateStr) ?: return false
+    val mMatches = if (monthIdx == 0) true else parsed.first == monthIdx
+    val yMatches = if (year == null) true else parsed.second == year
+    return mMatches && yMatches
+  }
+
+  private fun parseDateComponents(dateStr: String): Pair<Int, Int>? {
+    val slashParts = dateStr.split("/")
+    if (slashParts.size == 3) {
+      val month = slashParts[1].toIntOrNull() ?: return null
+      val year = slashParts[2].toIntOrNull() ?: return null
+      return Pair(month, year)
+    }
+    val dashParts = dateStr.split("-")
+    if (dashParts.size == 3) {
+      val year = dashParts[0].toIntOrNull() ?: return null
+      val month = dashParts[1].toIntOrNull() ?: return null
+      return Pair(month, year)
+    }
+    return null
+  }
+
+  private fun matchesDate(recordDate: String, filterDate: String): Boolean {
+    if (recordDate == filterDate) return true
+    val rNorm = normalizeDate(recordDate)
+    val fNorm = normalizeDate(filterDate)
+    return rNorm != null && rNorm == fNorm
+  }
+
+  private fun normalizeDate(d: String): String? {
+    val slashParts = d.split("/")
+    if (slashParts.size == 3) {
+      val day = slashParts[0].padStart(2, '0')
+      val month = slashParts[1].padStart(2, '0')
+      val year = slashParts[2]
+      return "$year-$month-$day"
+    }
+    val dashParts = d.split("-")
+    if (dashParts.size == 3) {
+      val year = dashParts[0]
+      val month = dashParts[1].padStart(2, '0')
+      val day = dashParts[2].padStart(2, '0')
+      return "$year-$month-$day"
+    }
+    return null
+  }
+
+  // =========================================================================
+  // 3. ADMIN OWN SADHNA SECTION
+  // =========================================================================
+  private fun renderAdminMySadhnaSection() {
+    val adminProfile = SessionManager.getSavedProfile(this)
+    val adminUid = adminProfile?.id ?: return
+
+    val myRecords = allSadhnaRecords.filter { it.menteeId == adminUid }
+    val filtered = myRecords.filter { record ->
+      var matches = true
+      if (selectedAdminMonthFilterIdx > 0) {
+        if (!matchesMonthYear(record.date, selectedAdminMonthFilterIdx, null)) {
+          matches = false
+        }
+      }
+      if (matches && selectedAdminDateFilter != null) {
+        if (!matchesDate(record.date, selectedAdminDateFilter!!)) {
+          matches = false
+        }
+      }
+      matches
+    }
+
+    layoutAdminMySadhnaList.removeAllViews()
+    tvAdminMySadhnaSubCount.text = "Total ${filtered.size} of ${myRecords.size} records recorded"
+
+    if (filtered.isEmpty()) {
+      val emptyCard = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setBackgroundColor(Color.WHITE)
+        elevation = 2f
+        setPadding(24, 24, 24, 24)
+        gravity = android.view.Gravity.CENTER
+      }
+      val emptyTv = TextView(this).apply {
+        text = if (myRecords.isEmpty()) {
+          "No Sadhna records found for Admin yet.\nTap '✏️ RECORD TODAY\'S SADHNA' to add your daily sadhna!"
+        } else {
+          "No records found for the chosen month or date filter."
+        }
+        gravity = android.view.Gravity.CENTER
+        setTextColor(Color.parseColor("#757575"))
+        textSize = 14f
+      }
+      emptyCard.addView(emptyTv)
+      layoutAdminMySadhnaList.addView(emptyCard)
+      return
+    }
+
+    for (record in filtered) {
+      val card = createAdminPersonalSadhnaRecordCard(record)
+      layoutAdminMySadhnaList.addView(card)
+    }
+  }
+
+  private fun createAdminPersonalSadhnaRecordCard(record: SadhnaSubmission): View {
+    val container = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      setBackgroundColor(Color.WHITE)
+      elevation = 3f
+      setPadding(18, 16, 18, 16)
+      val params = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+      ).apply {
+        setMargins(0, 0, 0, 14)
+      }
+      layoutParams = params
+      isClickable = true
+      isFocusable = true
+      setOnClickListener {
+        SadhnaDetailDialog.show(this@AdminDashboardActivity, record)
+      }
+    }
+
+    // Top Header: Date, Japa Badge
+    val topRow = LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      gravity = android.view.Gravity.CENTER_VERTICAL
+      layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+      )
+    }
+
+    val headerTv = TextView(this).apply {
+      text = "📅 ${record.date}"
+      textSize = 16f
+      setTextColor(Color.parseColor("#111111"))
+      setTypeface(null, android.graphics.Typeface.BOLD)
+      layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+    }
+
+    val japaTv = TextView(this).apply {
+      text = "📿 ${record.japaRounds} Rnds"
+      textSize = 14f
+      setTextColor(Color.parseColor("#E65100"))
+      setTypeface(null, android.graphics.Typeface.BOLD)
+    }
+
+    topRow.addView(headerTv)
+    topRow.addView(japaTv)
+    container.addView(topRow)
+
+    // Wake up & Sleep line
+    val wakeAndSleepTv = TextView(this).apply {
+      val sleepStr = record.sleepingTime.ifEmpty { "--:--" }
+      text = "⏰ Wake Up: ${record.wakeUpTime.ifEmpty { "--:--" }}  |  😴 Sleep: $sleepStr"
+      textSize = 13f
+      setTextColor(Color.parseColor("#424242"))
+      setPadding(0, 4, 0, 0)
+    }
+    container.addView(wakeAndSleepTv)
+
+    // Programs
+    val programsText = if (record.spiritualActivities.isNotEmpty()) {
+      "🪷 Programs: ${record.spiritualActivities.joinToString(", ")}"
+    } else {
+      "🪷 Programs: None recorded"
+    }
+    val programsTv = TextView(this).apply {
+      text = programsText
+      textSize = 12f
+      setTextColor(Color.parseColor("#00695C"))
+      setPadding(0, 2, 0, 0)
+    }
+    container.addView(programsTv)
+
+    // Reading, Hearing, Seva
+    val readingText = buildString {
+      if (record.bookReadingSubject.isNotEmpty()) {
+        val rTime = if (record.bookReadingTime.isNotEmpty()) " (${record.bookReadingTime})" else ""
+        append("📖 ${record.bookReadingSubject}$rTime ")
+      }
+      if (record.hearingSubject.isNotEmpty()) {
+        val hTime = if (record.hearingTime.isNotEmpty()) " (${record.hearingTime})" else ""
+        append("🎧 ${record.hearingSubject}$hTime ")
+      }
+      if (record.sevaCompleted) {
+        val sDesc = if (record.sevaDescription.isNotEmpty()) ": ${record.sevaDescription}" else ""
+        append("🌺 Seva$sDesc")
+      }
+    }
+    if (readingText.isNotEmpty()) {
+      val readingTv = TextView(this).apply {
+        text = readingText
+        textSize = 12f
+        setTextColor(Color.parseColor("#616161"))
+        setPadding(0, 2, 0, 0)
+      }
+      container.addView(readingTv)
+    }
+
+    // Action Buttons: [ View Details ] [ ✏️ Edit ] [ 🗑️ Delete ]
+    val actionRow = LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+      ).apply {
+        topMargin = 10
+      }
+    }
+
+    val btnView = Button(this).apply {
+      text = "🔍 View"
+      textSize = 11f
+      minHeight = 36
+      setBackgroundColor(Color.parseColor("#00695C"))
+      setTextColor(Color.WHITE)
+      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+        rightMargin = 4
+      }
+      layoutParams = p
+      setOnClickListener {
+        SadhnaDetailDialog.show(this@AdminDashboardActivity, record)
+      }
+    }
+
+    val btnEdit = Button(this).apply {
+      text = "✏️ Edit"
+      textSize = 11f
+      minHeight = 36
+      setBackgroundColor(Color.parseColor("#E65100"))
+      setTextColor(Color.WHITE)
+      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+        rightMargin = 4
+      }
+      layoutParams = p
+      setOnClickListener {
+        val intent = Intent(this@AdminDashboardActivity, DailySadhnaActivity::class.java).apply {
+          putExtra("EDIT_DATE", record.date)
+        }
+        startActivity(intent)
+      }
+    }
+
+    val btnDel = Button(this).apply {
+      text = "🗑️ Delete"
+      textSize = 11f
+      minHeight = 36
+      setBackgroundColor(Color.parseColor("#D32F2F"))
+      setTextColor(Color.WHITE)
+      setOnClickListener {
+        confirmDeleteSadhna(record)
+      }
+    }
+
+    actionRow.addView(btnView)
+    actionRow.addView(btnEdit)
+    actionRow.addView(btnDel)
+    container.addView(actionRow)
+
+    return container
+  }
+
+  // =========================================================================
+  // ADMIN OWN SADHNA EXCEL EXPORT DIALOG
+  // =========================================================================
+  private fun showAdminOwnSadhnaExportDialog() {
+    val adminProfile = SessionManager.getSavedProfile(this)
+    val adminUid = adminProfile?.id ?: return
+    val adminName = adminProfile.name.ifEmpty { "Admin" }
+
+    val adminRecords = allSadhnaRecords.filter { it.menteeId == adminUid }
+
+    val dialog = Dialog(this)
+    dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+
+    val scrollView = ScrollView(this).apply {
+      layoutParams = ViewGroup.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        ViewGroup.LayoutParams.WRAP_CONTENT
+      )
+      isFillViewport = true
+      setBackgroundColor(Color.parseColor("#FAF8F2"))
+    }
+
+    val root = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      setPadding(28, 24, 28, 24)
+      layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+      )
+    }
+
+    val titleTv = TextView(this).apply {
+      text = "Export Admin Sadhna (.xlsx)"
+      textSize = 18f
+      setTextColor(Color.parseColor("#111111"))
+      setTypeface(null, android.graphics.Typeface.BOLD)
+      gravity = android.view.Gravity.CENTER
+    }
+    root.addView(titleTv)
+
+    val subTv = TextView(this).apply {
+      text = "Generate Microsoft Excel report for HG $adminName's personal Sadhna records."
+      textSize = 13f
+      setTextColor(Color.parseColor("#616161"))
+      gravity = android.view.Gravity.CENTER
+      setPadding(0, 4, 0, 16)
+    }
+    root.addView(subTv)
+
+    // Month Selector
+    val monthLabel = TextView(this).apply {
+      text = "Select Month:"
+      textSize = 13f
+      setTextColor(Color.parseColor("#212121"))
+      setTypeface(null, android.graphics.Typeface.BOLD)
+    }
+    root.addView(monthLabel)
+
+    val monthNames = arrayOf(
+      "All Months (Entire History)",
+      "01 - January", "02 - February", "03 - March", "04 - April",
+      "05 - May", "06 - June", "07 - July", "08 - August",
+      "09 - September", "10 - October", "11 - November", "12 - December"
+    )
+    val monthSpinner = Spinner(this).apply {
+      adapter = ArrayAdapter(this@AdminDashboardActivity, android.R.layout.simple_spinner_dropdown_item, monthNames)
+      val p = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = 4
+        bottomMargin = 12
+      }
+      layoutParams = p
+    }
+    root.addView(monthSpinner)
+
+    // Year Selector
+    val yearLabel = TextView(this).apply {
+      text = "Select Year:"
+      textSize = 13f
+      setTextColor(Color.parseColor("#212121"))
+      setTypeface(null, android.graphics.Typeface.BOLD)
+    }
+    root.addView(yearLabel)
+
+    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+    val years = arrayOf("All Years", (currentYear - 1).toString(), currentYear.toString(), (currentYear + 1).toString())
+    val yearSpinner = Spinner(this).apply {
+      adapter = ArrayAdapter(this@AdminDashboardActivity, android.R.layout.simple_spinner_dropdown_item, years)
+      setSelection(2) // Default to current year
+      val p = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = 4
+        bottomMargin = 16
+      }
+      layoutParams = p
+    }
+    root.addView(yearSpinner)
+
+    // Preview Text
+    val previewTv = TextView(this).apply {
+      textSize = 12f
+      setTextColor(Color.parseColor("#00695C"))
+      setTypeface(null, android.graphics.Typeface.BOLD)
+      setPadding(0, 0, 0, 16)
+    }
+    root.addView(previewTv)
+
+    fun getFilteredExportRecords(): List<SadhnaSubmission> {
+      val mIdx = monthSpinner.selectedItemPosition
+      val yStr = yearSpinner.selectedItem.toString()
+      val yInt = yStr.toIntOrNull()
+
+      return adminRecords.filter { record ->
+        matchesMonthYear(record.date, mIdx, yInt)
+      }
+    }
+
+    fun updateExportPreview() {
+      val count = getFilteredExportRecords().size
+      previewTv.text = "• Matching Records: $count\n• Output Format: Microsoft Excel (.xlsx)"
+    }
+
+    monthSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+      override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+        updateExportPreview()
+      }
+      override fun onNothingSelected(p0: AdapterView<*>?) {}
+    }
+
+    yearSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+      override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+        updateExportPreview()
+      }
+      override fun onNothingSelected(p0: AdapterView<*>?) {}
+    }
+
+    updateExportPreview()
+
+    val btnExport = Button(this).apply {
+      text = "📥 GENERATE & DOWNLOAD EXCEL (.xlsx)"
+      textSize = 13f
+      setTextColor(Color.WHITE)
+      setBackgroundColor(Color.parseColor("#2E7D32"))
+      layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = 8
+      }
+      setOnClickListener {
+        val records = getFilteredExportRecords()
+        if (records.isEmpty()) {
+          Toast.makeText(this@AdminDashboardActivity, "No Sadhna records found for Admin in the selected period.", Toast.LENGTH_LONG).show()
+          return@setOnClickListener
+        }
+        dialog.dismiss()
+        val mLabel = if (monthSpinner.selectedItemPosition == 0) "All_Months" else "Month_${monthSpinner.selectedItemPosition}"
+        val yLabel = yearSpinner.selectedItem.toString()
+        val prefix = "My_Admin_Sadhna_${adminName.replace(" ", "_")}_${mLabel}_$yLabel"
+        exportExcelData(records, prefix, "Admin ($adminName) Personal Sadhna")
+      }
+    }
+    root.addView(btnExport)
+
+    val btnCancel = Button(this).apply {
+      text = "CANCEL"
+      textSize = 12f
+      setTextColor(Color.parseColor("#616161"))
+      setBackgroundColor(Color.parseColor("#E0E0E0"))
+      layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = 8
+      }
+      setOnClickListener {
+        dialog.dismiss()
+      }
+    }
+    root.addView(btnCancel)
+
+    scrollView.addView(root)
+    dialog.setContentView(scrollView)
+    dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+    dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    dialog.show()
+  }
+
+  // =========================================================================
+  // VIEW COUNSELLOR'S PERSONAL SADHNA RECORDS DIALOG
+  // =========================================================================
+  private fun showCounsellorSadhnaDialog(counsellor: UserProfile) {
+    val dialog = Dialog(this)
+    dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+
+    val scrollView = ScrollView(this).apply {
+      layoutParams = ViewGroup.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        ViewGroup.LayoutParams.WRAP_CONTENT
+      )
+      isFillViewport = true
+      setBackgroundColor(Color.parseColor("#FAF8F2"))
+    }
+
+    val root = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      setPadding(24, 20, 24, 24)
+      layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+      )
+    }
+
+    // Title
+    val titleTv = TextView(this).apply {
+      text = "📿 HG ${counsellor.name}'s Sadhna"
+      textSize = 18f
+      setTextColor(Color.parseColor("#111111"))
+      setTypeface(null, android.graphics.Typeface.BOLD)
+      gravity = android.view.Gravity.CENTER
+    }
+    root.addView(titleTv)
+
+    val emailTv = TextView(this).apply {
+      text = "Counsellor Email: ${counsellor.email}"
+      textSize = 12f
+      setTextColor(Color.parseColor("#616161"))
+      gravity = android.view.Gravity.CENTER
+      setPadding(0, 2, 0, 12)
+    }
+    root.addView(emailTv)
+
+    // Filter Controls: Month Spinner & Date Picker
+    val filterCard = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      setBackgroundColor(Color.WHITE)
+      elevation = 2f
+      setPadding(14, 12, 14, 12)
+      val p = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        bottomMargin = 12
+      }
+      layoutParams = p
+    }
+
+    val monthNames = arrayOf(
+      "All Months",
+      "01 - January", "02 - February", "03 - March", "04 - April",
+      "05 - May", "06 - June", "07 - July", "08 - August",
+      "09 - September", "10 - October", "11 - November", "12 - December"
+    )
+    val monthSpinner = Spinner(this).apply {
+      adapter = ArrayAdapter(this@AdminDashboardActivity, android.R.layout.simple_spinner_dropdown_item, monthNames)
+      val p = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        bottomMargin = 8
+      }
+      layoutParams = p
+    }
+    filterCard.addView(monthSpinner)
+
+    val dateRow = LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+    }
+
+    var selectedCounsellorDate: String? = null
+
+    val btnPickDate = Button(this).apply {
+      text = "📅 Pick Date"
+      textSize = 11f
+      minHeight = 36
+      setBackgroundColor(Color.parseColor("#00695C"))
+      setTextColor(Color.WHITE)
+      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+        rightMargin = 4
+      }
+      layoutParams = p
+    }
+
+    val btnClearDate = Button(this).apply {
+      text = "Clear"
+      textSize = 11f
+      minHeight = 36
+      setBackgroundColor(Color.parseColor("#E0E0E0"))
+      setTextColor(Color.parseColor("#424242"))
+    }
+
+    dateRow.addView(btnPickDate)
+    dateRow.addView(btnClearDate)
+    filterCard.addView(dateRow)
+    root.addView(filterCard)
+
+    // Summary Count
+    val countTv = TextView(this).apply {
+      textSize = 12f
+      setTextColor(Color.parseColor("#00695C"))
+      setTypeface(null, android.graphics.Typeface.BOLD)
+      setPadding(0, 0, 0, 10)
+    }
+    root.addView(countTv)
+
+    // Loading indicator
+    val pbDialogLoading = ProgressBar(this).apply {
+      visibility = View.VISIBLE
+      val p = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        gravity = android.view.Gravity.CENTER_HORIZONTAL
+        bottomMargin = 12
+      }
+      layoutParams = p
+    }
+    root.addView(pbDialogLoading)
+
+    // List container
+    val recordsContainer = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+    }
+    root.addView(recordsContainer)
+
+    var liveCounsellorRecords = allSadhnaRecords.filter { it.menteeId == counsellor.id }
+
+    fun refreshCounsellorRecordCards() {
+      recordsContainer.removeAllViews()
+      val mIdx = monthSpinner.selectedItemPosition
+      val filtered = liveCounsellorRecords.filter { record ->
+        var ok = true
+        if (mIdx > 0 && !matchesMonthYear(record.date, mIdx, null)) {
+          ok = false
+        }
+        if (ok && selectedCounsellorDate != null && !matchesDate(record.date, selectedCounsellorDate!!)) {
+          ok = false
+        }
+        ok
+      }
+
+      countTv.text = "Showing ${filtered.size} of ${liveCounsellorRecords.size} records"
+
+      if (filtered.isEmpty()) {
+        val emptyTv = TextView(this).apply {
+          text = if (liveCounsellorRecords.isEmpty()) {
+            "No personal Sadhna records submitted by HG ${counsellor.name} yet."
+          } else {
+            "No records match the active month/date filter."
+          }
+          gravity = android.view.Gravity.CENTER
+          setTextColor(Color.parseColor("#757575"))
+          textSize = 13f
+          setPadding(0, 24, 0, 24)
+        }
+        recordsContainer.addView(emptyTv)
+        return
+      }
+
+      for (record in filtered) {
+        val card = LinearLayout(this).apply {
+          orientation = LinearLayout.VERTICAL
+          setBackgroundColor(Color.WHITE)
+          elevation = 2f
+          setPadding(14, 12, 14, 12)
+          val p = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            bottomMargin = 10
+          }
+          layoutParams = p
+          isClickable = true
+          isFocusable = true
+          setOnClickListener {
+            SadhnaDetailDialog.show(this@AdminDashboardActivity, record)
+          }
+        }
+
+        val top = LinearLayout(this).apply {
+          orientation = LinearLayout.HORIZONTAL
+          gravity = android.view.Gravity.CENTER_VERTICAL
+          layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        }
+
+        val dTv = TextView(this).apply {
+          text = "📅 ${record.date}"
+          textSize = 14f
+          setTextColor(Color.parseColor("#111111"))
+          setTypeface(null, android.graphics.Typeface.BOLD)
+          layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val jTv = TextView(this).apply {
+          text = "📿 ${record.japaRounds} Rnds"
+          textSize = 13f
+          setTextColor(Color.parseColor("#E65100"))
+          setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+
+        top.addView(dTv)
+        top.addView(jTv)
+        card.addView(top)
+
+        val timesTv = TextView(this).apply {
+          val sleepStr = record.sleepingTime.ifEmpty { "--:--" }
+          text = "⏰ Wake: ${record.wakeUpTime.ifEmpty { "--:--" }} | 😴 Sleep: $sleepStr"
+          textSize = 12f
+          setTextColor(Color.parseColor("#424242"))
+          setPadding(0, 4, 0, 0)
+        }
+        card.addView(timesTv)
+
+        if (record.spiritualActivities.isNotEmpty()) {
+          val actTv = TextView(this).apply {
+            text = "🪷 ${record.spiritualActivities.joinToString(", ")}"
+            textSize = 11f
+            setTextColor(Color.parseColor("#00695C"))
+            setPadding(0, 2, 0, 0)
+          }
+          card.addView(actTv)
+        }
+
+        val readText = buildString {
+          if (record.bookReadingSubject.isNotEmpty()) append("📖 ${record.bookReadingSubject} ")
+          if (record.hearingSubject.isNotEmpty()) append("🎧 ${record.hearingSubject} ")
+          if (record.sevaCompleted) append("🌺 Seva Done")
+        }
+        if (readText.isNotEmpty()) {
+          val rTv = TextView(this).apply {
+            text = readText
+            textSize = 11f
+            setTextColor(Color.parseColor("#616161"))
+            setPadding(0, 2, 0, 0)
+          }
+          card.addView(rTv)
+        }
+
+        val btnView = Button(this).apply {
+          text = "View Details ➔"
+          textSize = 10f
+          minHeight = 32
+          setBackgroundColor(Color.parseColor("#E65100"))
+          setTextColor(Color.WHITE)
+          val p = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = 6
+          }
+          layoutParams = p
+          setOnClickListener {
+            SadhnaDetailDialog.show(this@AdminDashboardActivity, record)
+          }
+        }
+        card.addView(btnView)
+
+        recordsContainer.addView(card)
+      }
+    }
+
+    btnPickDate.setOnClickListener {
+      val c = Calendar.getInstance()
+      DatePickerDialog(
+        this,
+        { _, year, month, dayOfMonth ->
+          val formattedDate = String.format(Locale.getDefault(), "%02d/%02d/%04d", dayOfMonth, month + 1, year)
+          selectedCounsellorDate = formattedDate
+          btnPickDate.text = "📅 $formattedDate"
+          refreshCounsellorRecordCards()
+        },
+        c.get(Calendar.YEAR),
+        c.get(Calendar.MONTH),
+        c.get(Calendar.DAY_OF_MONTH)
+      ).show()
+    }
+
+    btnClearDate.setOnClickListener {
+      selectedCounsellorDate = null
+      btnPickDate.text = "📅 Pick Date"
+      refreshCounsellorRecordCards()
+    }
+
+    monthSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+      override fun onItemSelected(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+        refreshCounsellorRecordCards()
+      }
+      override fun onNothingSelected(p0: AdapterView<*>?) {}
+    }
+
+    // Direct realtime listener for this Counsellor's personal records
+    val counsellorListener = SessionManager.listenToSadhnaRecordsForMentee(
+      menteeUid = counsellor.id,
+      onUpdate = { records ->
+        pbDialogLoading.visibility = View.GONE
+        liveCounsellorRecords = records.sortedByDescending { it.date }
+        refreshCounsellorRecordCards()
+      },
+      onError = { e ->
+        pbDialogLoading.visibility = View.GONE
+        // Fallback to in-memory records
+        liveCounsellorRecords = allSadhnaRecords.filter { it.menteeId == counsellor.id }
+        refreshCounsellorRecordCards()
+      }
+    )
+
+    dialog.setOnDismissListener {
+      counsellorListener.remove()
+    }
+
+    val btnClose = Button(this).apply {
+      text = "CLOSE"
+      textSize = 12f
+      setTextColor(Color.parseColor("#616161"))
+      setBackgroundColor(Color.parseColor("#E0E0E0"))
+      layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+        topMargin = 12
+      }
+      setOnClickListener {
+        dialog.dismiss()
+      }
+    }
+    root.addView(btnClose)
+
+    scrollView.addView(root)
+    dialog.setContentView(scrollView)
     dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
     dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     dialog.show()

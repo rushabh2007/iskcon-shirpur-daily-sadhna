@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootLoginScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FAF8F2"
@@ -56,8 +57,49 @@
             android:gravity="center_horizontal"
             android:orientation="vertical"
             android:paddingHorizontal="22dp"
-            android:paddingTop="28dp"
+            android:paddingTop="24dp"
             android:paddingBottom="26dp">
+
+            <!-- SELECTED ORGANIZATION CHIP WITH CHANGE LINK -->
+            <LinearLayout
+                android:id="@+id/layoutLoginOrgBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="18dp"
+                android:background="@drawable/bg_stat_accent_sadhna"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginEnd="8dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_flourish_lotus_amber" />
+
+                <TextView
+                    android:id="@+id/tvLoginOrgName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Organisation: ISKCON Shirpur"
+                    android:textColor="#B45309"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnChangeOrgFromLogin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:padding="4dp"
+                    android:text="Change"
+                    android:textColor="#1A237E"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <!-- EMAIL / USERNAME LABEL -->
             <TextView

@@ -3,6 +3,7 @@ package com.example
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
 import android.view.View
@@ -28,12 +29,17 @@ class LoginActivity : ComponentActivity() {
   private lateinit var btnCreateAccount: Button
   private lateinit var tvErrorMessage: TextView
   private lateinit var progressBar: ProgressBar
+  private lateinit var tvLoginOrgName: TextView
+  private lateinit var btnChangeOrgFromLogin: TextView
 
   private var isPasswordVisible = false
+  private var selectedOrgId: String = SessionManager.DEFAULT_ORG_ID
+  private var selectedOrgName: String = SessionManager.DEFAULT_ORG_NAME
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_login)
+    findViewById<View>(R.id.rootLoginScroll)?.let { InsetUtils.applySafeTopSpacing(it) }
 
     etEmail = findViewById(R.id.etEmail)
     etPassword = findViewById(R.id.etPassword)
@@ -43,6 +49,23 @@ class LoginActivity : ComponentActivity() {
     btnCreateAccount = findViewById(R.id.btnCreateAccount)
     tvErrorMessage = findViewById(R.id.tvErrorMessage)
     progressBar = findViewById(R.id.progressBar)
+    tvLoginOrgName = findViewById(R.id.tvLoginOrgName)
+    btnChangeOrgFromLogin = findViewById(R.id.btnChangeOrgFromLogin)
+
+    val savedOrg = SessionManager.getSelectedOrg(this)
+    selectedOrgId = intent.getStringExtra("EXTRA_ORG_ID") ?: savedOrg.id
+    selectedOrgName = intent.getStringExtra("EXTRA_ORG_NAME") ?: savedOrg.name
+    SessionManager.saveSelectedOrg(this, selectedOrgId, selectedOrgName)
+
+    tvLoginOrgName.text = "Organisation: $selectedOrgName"
+
+    btnChangeOrgFromLogin.setOnClickListener {
+      val intent = Intent(this, SelectOrganizationActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+      }
+      startActivity(intent)
+      finish()
+    }
 
     // Check existing session
     val savedProfile = SessionManager.getSavedProfile(this)
@@ -63,7 +86,10 @@ class LoginActivity : ComponentActivity() {
     }
 
     btnCreateAccount.setOnClickListener {
-      val intent = Intent(this, RegisterMenteeActivity::class.java)
+      val intent = Intent(this, RegisterMenteeActivity::class.java).apply {
+        putExtra("EXTRA_ORG_ID", selectedOrgId)
+        putExtra("EXTRA_ORG_NAME", selectedOrgName)
+      }
       startActivity(intent)
     }
   }
@@ -135,8 +161,28 @@ class LoginActivity : ComponentActivity() {
 
       if (result.isSuccess) {
         val (token, profile) = result.getOrThrow()
-        SessionManager.saveSession(this@LoginActivity, token, profile)
-        navigateToRoleDashboard(profile.role)
+        val userOrg = profile.organizationId.ifEmpty { SessionManager.DEFAULT_ORG_ID }
+
+        // Super Admin bypasses organization restriction on Page 1 (global management account)
+        if (profile.role.equals("super_admin", ignoreCase = true) || profile.email.equals("iskconshirpur@gmail.com", ignoreCase = true)) {
+          SessionManager.saveSession(this@LoginActivity, token, profile)
+          navigateToRoleDashboard("super_admin")
+          return@launch
+        }
+
+        if (!userOrg.equals(selectedOrgId, ignoreCase = true)) {
+          val actualOrgName = profile.organizationName.ifEmpty { SessionManager.getOrgName(userOrg) }
+          showError("This account belongs to $actualOrgName. Please select $actualOrgName on the first screen.")
+          try { FirebaseAuth.getInstance().signOut() } catch (_: Exception) {}
+          return@launch
+        }
+
+        if (profile.role.lowercase(Locale.getDefault()).trim() == "admin") {
+          promptAdminPasscode(token, profile)
+        } else {
+          SessionManager.saveSession(this@LoginActivity, token, profile)
+          navigateToRoleDashboard(profile.role)
+        }
       } else {
         val formattedError = SessionManager.formatErrorMessage(result.exceptionOrNull())
         showError(formattedError)
@@ -144,11 +190,42 @@ class LoginActivity : ComponentActivity() {
     }
   }
 
+  private fun promptAdminPasscode(token: String, profile: UserProfile) {
+    val input = EditText(this).apply {
+      hint = "Enter Admin Passcode"
+      inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+      setPadding(50, 40, 50, 40)
+    }
+
+    AlertDialog.Builder(this)
+      .setTitle("Admin Passcode Verification")
+      .setMessage("Please enter the Admin Passcode for ${profile.organizationName}:")
+      .setView(input)
+      .setCancelable(false)
+      .setPositiveButton("Verify & Login") { dialog, _ ->
+        val enteredPasscode = input.text.toString().trim()
+        if (enteredPasscode == SessionManager.ADMIN_PASSCODE) {
+          SessionManager.saveSession(this@LoginActivity, token, profile)
+          navigateToRoleDashboard(profile.role)
+        } else {
+          showError("Incorrect Admin Passcode. Access denied.")
+          try { FirebaseAuth.getInstance().signOut() } catch (_: Exception) {}
+        }
+        dialog.dismiss()
+      }
+      .setNegativeButton("Cancel") { dialog, _ ->
+        try { FirebaseAuth.getInstance().signOut() } catch (_: Exception) {}
+        dialog.dismiss()
+      }
+      .show()
+  }
+
   private fun navigateToRoleDashboard(role: String) {
     when (role.lowercase(Locale.getDefault()).trim()) {
+      "super_admin" -> navigateToDashboard(SuperAdminDashboardActivity::class.java)
       "admin" -> navigateToDashboard(AdminDashboardActivity::class.java)
-      "mentor" -> navigateToDashboard(MentorDashboardActivity::class.java)
-      "mentee" -> navigateToDashboard(MenteeDashboardActivity::class.java)
+      "mentor", "counsellor" -> navigateToDashboard(MentorDashboardActivity::class.java)
+      "mentee", "counselee" -> navigateToDashboard(MenteeDashboardActivity::class.java)
       else -> {
         SessionManager.clearSession(this)
         showError("Invalid user role assigned. Please contact the administrator.")

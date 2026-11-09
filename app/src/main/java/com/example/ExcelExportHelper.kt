@@ -52,6 +52,7 @@ object ExcelExportHelper {
     ColumnDef("Hearing Duration", 18.0),
     ColumnDef("Devotional Seva", 18.0),
     ColumnDef("Seva Duration", 18.0),
+    ColumnDef("Seva Description", 30.0),
     ColumnDef("Sleeping Time", 16.0),
     ColumnDef("Submission Timestamp", 22.0)
   )
@@ -330,6 +331,7 @@ object ExcelExportHelper {
         Pair(if (sub.hearingSubject.isNotEmpty()) sub.hearingTime.ifEmpty { "-" } else "-", 3), // Hearing Duration
         Pair(sevaStatus, 3), // Seva Completed
         Pair(sevaDuration, 3), // Seva Duration
+        Pair(sub.sevaDescription.ifEmpty { "-" }, 2), // Seva Description
         Pair(sub.sleepingTime.ifEmpty { "-" }, 3), // Sleeping Time
         Pair(formattedCreatedAt, 3) // Submission Timestamp
       )
@@ -518,5 +520,48 @@ object ExcelExportHelper {
       Toast.makeText(context, "Opening share chooser...", Toast.LENGTH_SHORT).show()
       shareExcelFile(context, file)
     }
+  }
+
+  // =========================================================================
+  // DATE FILTERING HELPERS FOR MONTHLY & DATE-RANGE EXPORTS
+  // =========================================================================
+
+  fun normalizeDateString(dateStr: String): String? {
+    val clean = dateStr.trim()
+    val slashParts = clean.split("/")
+    if (slashParts.size == 3) {
+      val day = slashParts[0].padStart(2, '0')
+      val month = slashParts[1].padStart(2, '0')
+      val year = slashParts[2]
+      return "$year-$month-$day"
+    }
+    val dashParts = clean.split("-")
+    if (dashParts.size == 3) {
+      val year = dashParts[0]
+      val month = dashParts[1].padStart(2, '0')
+      val day = dashParts[2].padStart(2, '0')
+      return "$year-$month-$day"
+    }
+    return null
+  }
+
+  fun isDateInMonthYear(dateStr: String, monthIdx: Int, year: Int?): Boolean {
+    if (monthIdx == 0 && year == null) return true
+    val norm = normalizeDateString(dateStr) ?: return false
+    val parts = norm.split("-")
+    if (parts.size != 3) return false
+    val y = parts[0].toIntOrNull() ?: return false
+    val m = parts[1].toIntOrNull() ?: return false
+
+    val mOk = if (monthIdx == 0) true else m == monthIdx
+    val yOk = if (year == null) true else y == year
+    return mOk && yOk
+  }
+
+  fun isDateInRange(dateStr: String, startDateNorm: String?, endDateNorm: String?): Boolean {
+    val norm = normalizeDateString(dateStr) ?: return false
+    if (startDateNorm != null && norm < startDateNorm) return false
+    if (endDateNorm != null && norm > endDateNorm) return false
+    return true
   }
 }

@@ -45,6 +45,7 @@ class MentorSubDashboardActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_mentor_sub_dashboard)
+    findViewById<View>(R.id.rootMentorSubDashboardLayout)?.let { InsetUtils.applySafeTopSpacing(it) }
 
     btnBack = findViewById(R.id.btnBack)
     tvMentorSubName = findViewById(R.id.tvMentorSubName)

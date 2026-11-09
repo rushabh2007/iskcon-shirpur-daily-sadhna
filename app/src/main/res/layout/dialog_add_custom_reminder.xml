@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#FFFFFF"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="serif"
+        android:text="Add Sadhna Reminder"
+        android:textColor="#D8232A"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="16dp"
+        android:text="Set a custom spiritual practice &amp; reminder time"
+        android:textColor="#666666"
+        android:textSize="12sp" />
+
+    <!-- Commitment Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Practice / Commitment Name"
+        android:textColor="#333333"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/etCustomTitle"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_input_field_light"
+        android:hint="e.g. Afternoon Japa 4 Rounds, Gita Study"
+        android:paddingHorizontal="12dp"
+        android:textColor="#111111"
+        android:textSize="14sp" />
+
+    <!-- Commitment Description / Message -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Spiritual Note / Message"
+        android:textColor="#333333"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/etCustomSubtitle"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_input_field_light"
+        android:hint="e.g. Read Chapter 9 slokas with commentary"
+        android:paddingHorizontal="12dp"
+        android:textColor="#111111"
+        android:textSize="14sp" />
+
+    <!-- Emoji Selection Row -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Select Icon"
+        android:textColor="#333333"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:id="@+id/llEmojiOptions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="14dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tvEmoji1"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="#FFE082"
+            android:gravity="center"
+            android:text="📿"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvEmoji2"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="#F5F5F5"
+            android:gravity="center"
+            android:text="📖"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvEmoji3"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="#F5F5F5"
+            android:gravity="center"
+            android:text="🌅"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvEmoji4"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="#F5F5F5"
+            android:gravity="center"
+            android:text="🪔"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvEmoji5"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="#F5F5F5"
+            android:gravity="center"
+            android:text="🎧"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/tvEmoji6"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="8dp"
+            android:background="#F5F5F5"
+            android:gravity="center"
+            android:text="🙏"
+            android:textSize="20sp" />
+    </LinearLayout>
+
+    <!-- Reminder Time Picker Button -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Reminder Time"
+        android:textColor="#333333"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <Button
+        android:id="@+id/btnPickCustomTime"
+        style="?android:attr/borderlessButtonStyle"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp"
+        android:backgroundTint="#FFF8E1"
+        android:drawableStart="@android:drawable/ic_menu_recent_history"
+        android:drawablePadding="8dp"
+        android:gravity="start|center_vertical"
+        android:paddingHorizontal="14dp"
+        android:text="⏰ Set Time: 04:30 PM"
+        android:textColor="#E65100"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+</LinearLayout>

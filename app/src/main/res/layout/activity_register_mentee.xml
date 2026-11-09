@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootRegisterScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FAF8F2"
@@ -55,6 +56,65 @@
             android:paddingHorizontal="22dp"
             android:paddingTop="24dp"
             android:paddingBottom="24dp">
+
+            <!-- SELECTED ORGANISATION BANNER -->
+            <LinearLayout
+                android:id="@+id/layoutRegisterOrgBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_stat_accent_sadhna"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginEnd="8dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_flourish_lotus_amber" />
+
+                <TextView
+                    android:id="@+id/tvRegisterSelectedOrgName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Organisation: ISKCON Shirpur"
+                    android:textColor="#B45309"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnChangeOrgFromRegister"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:padding="4dp"
+                    android:text="Change"
+                    android:textColor="#1A237E"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 0. SELECT ROLE -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Select Role"
+                android:textColor="#111111"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Spinner
+                android:id="@+id/spinnerRole"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="14dp"
+                android:background="@drawable/bg_input_field_light"
+                android:paddingHorizontal="14dp" />
 
             <!-- 1. FULL NAME -->
             <TextView
@@ -152,25 +212,54 @@
                 android:textColorHint="#757575"
                 android:textSize="15sp" />
 
-            <!-- 5. SELECT ROLE -->
-            <TextView
+            <!-- 4B. ADMIN PASSCODE (MANDATORY FOR ADMIN ROLE) -->
+            <LinearLayout
+                android:id="@+id/layoutAdminPasscodeSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Select Role"
-                android:textColor="#111111"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:orientation="vertical"
+                android:visibility="gone">
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Admin Passcode"
+                    android:textColor="#111111"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="6dp"
+                    android:text="* Mandatory authorization passcode required to register as Administrator"
+                    android:textColor="#666666"
+                    android:textSize="12sp" />
+
+                <EditText
+                    android:id="@+id/etRegisterAdminPasscode"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginBottom="14dp"
+                    android:background="@drawable/bg_input_field_light"
+                    android:hint="Enter Admin Passcode"
+                    android:inputType="textPassword"
+                    android:maxLines="1"
+                    android:paddingHorizontal="14dp"
+                    android:textColor="#111111"
+                    android:textColorHint="#757575"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <!-- 5. SELECT CENTRE / ORGANIZATION (HIDDEN - PRESELECTED AT FIRST PAGE) -->
             <Spinner
-                android:id="@+id/spinnerRole"
+                android:id="@+id/spinnerOrganization"
                 android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginTop="6dp"
-                android:layout_marginBottom="14dp"
-                android:background="@drawable/bg_input_field_light"
-                android:paddingHorizontal="14dp" />
+                android:layout_height="0dp"
+                android:visibility="gone" />
 
-            <!-- 6. SELECT COUNSELLOR (VISIBLE WHEN COUNSELLEE IS SELECTED) -->
+            <!-- 5. SELECT COUNSELLOR -->
             <LinearLayout
                 android:id="@+id/layoutMentorSection"
                 android:layout_width="match_parent"
@@ -202,46 +291,6 @@
                     android:layout_marginBottom="14dp"
                     android:background="@drawable/bg_input_field_light"
                     android:paddingHorizontal="14dp" />
-            </LinearLayout>
-
-            <!-- 7. ADMIN PASSCODE SECTION (VISIBLE WHEN ADMIN IS SELECTED) -->
-            <LinearLayout
-                android:id="@+id/layoutAdminPasscodeSection"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Admin Authorization Passcode"
-                    android:textColor="#C62828"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:layout_marginBottom="6dp"
-                    android:text="* Enter the secure temple administrator passcode to register."
-                    android:textColor="#666666"
-                    android:textSize="12sp" />
-
-                <EditText
-                    android:id="@+id/etAdminPasscode"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginBottom="14dp"
-                    android:background="@drawable/bg_input_field_light"
-                    android:hint="Enter Admin Passcode"
-                    android:inputType="textPassword"
-                    android:maxLines="1"
-                    android:paddingHorizontal="14dp"
-                    android:textColor="#111111"
-                    android:textColorHint="#757575"
-                    android:textSize="15sp" />
             </LinearLayout>
 
             <!-- STATUS / PROGRESS -->

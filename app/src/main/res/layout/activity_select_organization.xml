@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootSelectOrgScroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FAF8F2"
+    android:fillViewport="true"
+    android:overScrollMode="never"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="36dp"
+        android:paddingBottom="36dp">
+
+        <!-- 1. HEADER: EMBLEM & SACRED TITLE -->
+        <ImageView
+            android:id="@+id/ivOrgLogo"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="ISKCON Sacred Logo"
+            android:scaleType="fitCenter"
+            android:src="@drawable/logo" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="serif"
+            android:gravity="center"
+            android:text="ISKCON"
+            android:textColor="#111111"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvSelectOrgHeading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:text="Select Admin / Organisation"
+            android:textColor="#2D3748"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="24dp"
+            android:gravity="center"
+            android:text="Choose your temple centre to access the portal"
+            android:textColor="#64748B"
+            android:textSize="13sp" />
+
+        <!-- 2. MAIN SELECTION CARD -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_white_glass_card"
+            android:elevation="4dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="22dp"
+            android:paddingBottom="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Available Organisations"
+                    android:textColor="#374151"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <ProgressBar
+                    android:id="@+id/pbOrgLoading"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- DYNAMIC ORGANIZATION SELECTION DROPDOWN -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginBottom="20dp"
+                android:background="@drawable/bg_input_field_light">
+
+                <Spinner
+                    android:id="@+id/spinnerOrganization"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@android:color/transparent"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="40dp"
+                    android:spinnerMode="dropdown" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="16dp"
+                    android:text="▼"
+                    android:textColor="#6B7280"
+                    android:textSize="11sp"
+                    android:importantForAccessibility="no" />
+            </FrameLayout>
+
+            <!-- LOGIN BUTTON -->
+            <Button
+                android:id="@+id/btnSelectOrgLogin"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_login_gradient_btn"
+                android:elevation="2dp"
+                android:text="LOGIN"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- 3. NEW ADMIN / REQUEST PANEL CONTACT CARD -->
+        <LinearLayout
+            android:id="@+id/layoutRequestAdminCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_stat_accent_sadhna"
+            android:elevation="1dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingHorizontal="18dp"
+            android:paddingVertical="18dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="Want to create a new organisation?"
+                android:textColor="#92400E"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:text="Please email:"
+                android:textColor="#B45309"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvAdminContactEmail"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:padding="6dp"
+                android:text="shirpuriskcon@gmail.com"
+                android:textColor="#B45309"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="(Tap to email your request)"
+                android:textColor="#78350F"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+        <!-- FOOTER BLESSING -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:text="Hare Krishna Hare Rama • Daily Sadhna Portal"
+            android:textColor="#9E9E9E"
+            android:textSize="11sp" />
+
+    </LinearLayout>
+</ScrollView>

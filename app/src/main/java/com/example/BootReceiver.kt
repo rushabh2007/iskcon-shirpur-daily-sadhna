@@ -11,7 +11,7 @@ class BootReceiver : BroadcastReceiver() {
   }
 
   override fun onReceive(context: Context, intent: Intent) {
-    Log.i(TAG, "Device boot or time change broadcast received: ${intent.action}. Rescheduling 9:00 PM reminder.")
-    SadhnaReminderManager.scheduleDailyReminder(context)
+    Log.i(TAG, "Device boot or time change broadcast received: ${intent.action}. Rescheduling all Sadhna reminders.")
+    SadhnaReminderManager.scheduleAllReminders(context)
   }
 }

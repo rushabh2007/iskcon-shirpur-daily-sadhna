@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootMentorDashboardLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -63,18 +64,31 @@
             </LinearLayout>
 
             <Button
+                android:id="@+id/btnMentorReminders"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginEnd="6dp"
+                android:backgroundTint="#FFF3E0"
+                android:minHeight="36dp"
+                android:text="🔔 Reminders"
+                android:textColor="#E65100"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <Button
                 android:id="@+id/btnLogout"
                 style="?android:attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="48dp"
+                android:layout_height="36dp"
+                android:minHeight="36dp"
                 android:text="Logout"
                 android:textColor="#C62828"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- TABS ROW: 1. COUNSELLEES | 2. COUNSELLEES SADHNA -->
+        <!-- TABS ROW: 1. REQUESTS | 2. COUNSELLEES | 3. COUNSELLEES SADHNA -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -84,15 +98,29 @@
             android:layout_marginBottom="16dp">
 
             <Button
-                android:id="@+id/btnMentorTabMentees"
+                android:id="@+id/btnMentorTabRequests"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_marginEnd="2dp"
                 android:layout_weight="1"
+                android:backgroundTint="#FFFFFF"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="REQUESTS"
+                android:textColor="#424242"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnMentorTabMentees"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="2dp"
+                android:layout_weight="1.2"
                 android:backgroundTint="#E65100"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:text="MY COUNSELLEES"
+                android:text="COUNSELLEES"
                 android:textColor="#FFFFFF"
                 android:textSize="11sp"
                 android:textStyle="bold" />
@@ -102,11 +130,11 @@
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_marginStart="2dp"
-                android:layout_weight="1"
+                android:layout_weight="1.2"
                 android:backgroundTint="#FFFFFF"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
-                android:text="COUNSELLEES SADHNA"
+                android:text="SADHNA"
                 android:textColor="#424242"
                 android:textSize="11sp"
                 android:textStyle="bold" />
@@ -120,6 +148,61 @@
             android:layout_marginBottom="12dp"
             android:indeterminateTint="#E65100"
             android:visibility="gone" />
+
+        <!-- SECTION 0: PENDING COUNSELLEE REQUESTS -->
+        <LinearLayout
+            android:id="@+id/layoutMentorSectionPendingRequests"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvPendingRequestsHeader"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Pending Counsellee Requests (0)"
+                    android:textColor="#C2410C"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btnRefreshPendingRequests"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:backgroundTint="#F5F5F5"
+                    android:minHeight="32dp"
+                    android:paddingHorizontal="8dp"
+                    android:text="🔄 Refresh"
+                    android:textColor="#424242"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:text="Review devotee requests to join your counselling group"
+                android:textColor="#757575"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:id="@+id/layoutPendingRequestsList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
 
         <!-- SECTION 1: ASSIGNED COUNSELLEES -->
         <LinearLayout

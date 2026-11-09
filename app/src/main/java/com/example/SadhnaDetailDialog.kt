@@ -203,6 +203,8 @@ object SadhnaDetailDialog {
     }
     addFieldRow(content5, "Seva Status:", sevaStatus, isHighlight = submission.sevaCompleted, isNegative = !submission.sevaCompleted)
     addFieldRow(content5, "Seva Time:", sevaDuration)
+    val sevaDesc = submission.sevaDescription.ifEmpty { "Not specified" }
+    addFieldRow(content5, "Seva Description:", sevaDesc, isHighlight = submission.sevaDescription.isNotEmpty())
     root.addView(card5)
 
     // --- CARD 6: NIGHT REST & SLEEPING TIME ---

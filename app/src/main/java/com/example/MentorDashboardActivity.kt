@@ -1,9 +1,15 @@
 package com.example
 
 import android.app.AlertDialog
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
@@ -11,9 +17,13 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.core.app.NotificationCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MentorDashboardActivity : ComponentActivity() {
 
@@ -22,10 +32,14 @@ class MentorDashboardActivity : ComponentActivity() {
   private lateinit var pbMentorLoading: ProgressBar
 
   // Tabs
+  private lateinit var btnMentorTabRequests: Button
   private lateinit var btnMentorTabMentees: Button
   private lateinit var btnMentorTabMenteesSadhna: Button
 
   // Sections
+  private lateinit var layoutMentorSectionPendingRequests: LinearLayout
+  private lateinit var tvPendingRequestsHeader: TextView
+  private lateinit var layoutPendingRequestsList: LinearLayout
   private lateinit var layoutMentorSectionMentees: LinearLayout
   private lateinit var layoutMentorSectionMenteesSadhna: LinearLayout
   private lateinit var layoutMentorSectionMySadhna: LinearLayout
@@ -40,9 +54,14 @@ class MentorDashboardActivity : ComponentActivity() {
   private lateinit var btnExportMenteesSadhna: Button
   private lateinit var btnExportMentorMySadhna: Button
 
+  private var pendingRequestsListener: ListenerRegistration? = null
   private var menteesListener: ListenerRegistration? = null
   private var menteesSadhnaListener: ListenerRegistration? = null
   private var mySadhnaListener: ListenerRegistration? = null
+
+  private val pendingRequestsList = mutableListOf<SessionManager.CounsellorRequest>()
+  private val notifiedRequestIds = mutableSetOf<String>()
+  private var isFirstRequestListenerRun = true
 
   private val menteesList = mutableListOf<UserProfile>()
   private val menteesSadhnaRecords = mutableListOf<SadhnaSubmission>()
@@ -53,13 +72,19 @@ class MentorDashboardActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_mentor_dashboard)
+    findViewById<View>(R.id.rootMentorDashboardLayout)?.let { InsetUtils.applySafeTopSpacing(it) }
 
     tvMentorWelcome = findViewById(R.id.tvMentorWelcome)
     btnLogout = findViewById(R.id.btnLogout)
     pbMentorLoading = findViewById(R.id.pbMentorLoading)
 
+    btnMentorTabRequests = findViewById(R.id.btnMentorTabRequests)
     btnMentorTabMentees = findViewById(R.id.btnMentorTabMentees)
     btnMentorTabMenteesSadhna = findViewById(R.id.btnMentorTabMenteesSadhna)
+
+    layoutMentorSectionPendingRequests = findViewById(R.id.layoutMentorSectionPendingRequests)
+    tvPendingRequestsHeader = findViewById(R.id.tvPendingRequestsHeader)
+    layoutPendingRequestsList = findViewById(R.id.layoutPendingRequestsList)
 
     layoutMentorSectionMentees = findViewById(R.id.layoutMentorSectionMentees)
     layoutMentorSectionMenteesSadhna = findViewById(R.id.layoutMentorSectionMenteesSadhna)
@@ -79,10 +104,16 @@ class MentorDashboardActivity : ComponentActivity() {
     val profile = SessionManager.getSavedProfile(this)
     currentMentorProfile = profile
     val name = profile?.name ?: "Counsellor"
-    tvMentorWelcome.text = "Welcome, HG $name"
+    val orgName = profile?.organizationName?.ifEmpty { SessionManager.getOrgName(profile.organizationId) } ?: ""
+    tvMentorWelcome.text = if (orgName.isNotEmpty()) "Welcome, HG $name • $orgName" else "Welcome, HG $name"
 
     findViewById<View>(R.id.fabAddSadhna)?.setOnClickListener {
       val intent = Intent(this, DailySadhnaActivity::class.java)
+      startActivity(intent)
+    }
+
+    findViewById<View>(R.id.btnMentorReminders)?.setOnClickListener {
+      val intent = Intent(this, SadhnaRemindersActivity::class.java)
       startActivity(intent)
     }
 
@@ -100,44 +131,76 @@ class MentorDashboardActivity : ComponentActivity() {
       exportMentorMySadhnaToExcel()
     }
 
+    findViewById<Button>(R.id.btnRefreshPendingRequests)?.setOnClickListener {
+      refreshPendingRequestsDirectly()
+    }
+
     val mentorUid = profile?.id
     if (!mentorUid.isNullOrEmpty()) {
       startRealtimeListeners(mentorUid)
     }
 
-    SadhnaReminderManager.scheduleDailyReminder(this)
+    SadhnaReminderManager.scheduleAllReminders(this)
     SadhnaReminderManager.requestNotificationPermissionIfNeeded(this)
   }
 
+  private var currentSelectedTab = 0
+
   private fun setupTabs() {
-    btnMentorTabMentees.setOnClickListener {
+    btnMentorTabRequests.setOnClickListener {
       selectTab(0)
     }
-    btnMentorTabMenteesSadhna.setOnClickListener {
+    btnMentorTabMentees.setOnClickListener {
       selectTab(1)
     }
-    selectTab(0)
+    btnMentorTabMenteesSadhna.setOnClickListener {
+      selectTab(2)
+    }
+    selectTab(1) // Default to Counsellees tab
   }
 
   private fun selectTab(tabIndex: Int) {
+    currentSelectedTab = tabIndex
     val activeColor = Color.parseColor("#E65100")
     val inactiveColor = Color.WHITE
     val activeTextColor = Color.WHITE
     val inactiveTextColor = Color.parseColor("#424242")
 
-    btnMentorTabMentees.backgroundTintList = android.content.res.ColorStateList.valueOf(if (tabIndex == 0) activeColor else inactiveColor)
-    btnMentorTabMentees.setTextColor(if (tabIndex == 0) activeTextColor else inactiveTextColor)
+    // Update Request button label with count and yellow dot if pending
+    updateRequestTabButton()
 
-    btnMentorTabMenteesSadhna.backgroundTintList = android.content.res.ColorStateList.valueOf(if (tabIndex == 1) activeColor else inactiveColor)
-    btnMentorTabMenteesSadhna.setTextColor(if (tabIndex == 1) activeTextColor else inactiveTextColor)
+    btnMentorTabRequests.backgroundTintList = android.content.res.ColorStateList.valueOf(if (tabIndex == 0) activeColor else inactiveColor)
+    btnMentorTabRequests.setTextColor(if (tabIndex == 0) activeTextColor else inactiveTextColor)
 
-    layoutMentorSectionMentees.visibility = if (tabIndex == 0) View.VISIBLE else View.GONE
-    layoutMentorSectionMenteesSadhna.visibility = if (tabIndex == 1) View.VISIBLE else View.GONE
+    btnMentorTabMentees.backgroundTintList = android.content.res.ColorStateList.valueOf(if (tabIndex == 1) activeColor else inactiveColor)
+    btnMentorTabMentees.setTextColor(if (tabIndex == 1) activeTextColor else inactiveTextColor)
+
+    btnMentorTabMenteesSadhna.backgroundTintList = android.content.res.ColorStateList.valueOf(if (tabIndex == 2) activeColor else inactiveColor)
+    btnMentorTabMenteesSadhna.setTextColor(if (tabIndex == 2) activeTextColor else inactiveTextColor)
+
+    // Visibility:
+    // When Requests tab is selected, show Requests section prominently
+    // When other tabs are selected, Requests section can also be shown if there are pending requests, or hidden
+    layoutMentorSectionPendingRequests.visibility = if (tabIndex == 0 || pendingRequestsList.isNotEmpty()) View.VISIBLE else View.GONE
+    layoutMentorSectionMentees.visibility = if (tabIndex == 1) View.VISIBLE else View.GONE
+    layoutMentorSectionMenteesSadhna.visibility = if (tabIndex == 2) View.VISIBLE else View.GONE
     layoutMentorSectionMySadhna.visibility = View.GONE
+  }
+
+  private fun updateRequestTabButton() {
+    val pendingCount = pendingRequestsList.size
+    if (pendingCount > 0) {
+      // Yellow dot indicator when pending requests exist
+      btnMentorTabRequests.text = "🟡 REQUESTS ($pendingCount)"
+    } else {
+      btnMentorTabRequests.text = "REQUESTS"
+    }
   }
 
   override fun onDestroy() {
     super.onDestroy()
+    pendingRequestsListener?.remove()
+    pendingRequestsListener = null
     menteesListener?.remove()
     menteesListener = null
     menteesSadhnaListener?.remove()
@@ -149,10 +212,35 @@ class MentorDashboardActivity : ComponentActivity() {
   private fun startRealtimeListeners(mentorUid: String) {
     pbMentorLoading.visibility = View.VISIBLE
 
+    // 0. Real-time listener for pending counsellee requests
+    pendingRequestsListener?.remove()
+    val orgId = currentMentorProfile?.organizationId ?: SessionManager.DEFAULT_ORG_ID
+    pendingRequestsListener = SessionManager.listenToPendingCounsellorRequests(
+      counsellorId = mentorUid,
+      organizationId = orgId,
+      onUpdate = { requests ->
+        pendingRequestsList.clear()
+        pendingRequestsList.addAll(requests)
+        updatePendingRequestsUI(requests)
+
+        for (req in requests) {
+          if (!isFirstRequestListenerRun && !notifiedRequestIds.contains(req.id)) {
+            showNewCounselleeNotification(req.counseleeName)
+          }
+          notifiedRequestIds.add(req.id)
+        }
+        isFirstRequestListenerRun = false
+      },
+      onError = { e ->
+        Log.w("MentorDashboard", "Error listening to requests: ${e.message}")
+      }
+    )
+
     // 1. Real-time listener for assigned mentees
     menteesListener?.remove()
     menteesListener = SessionManager.listenToMenteesForMentor(
       mentorUid = mentorUid,
+      organizationId = orgId,
       onUpdate = { mentees ->
         pbMentorLoading.visibility = View.GONE
         menteesList.clear()
@@ -239,9 +327,25 @@ class MentorDashboardActivity : ComponentActivity() {
     )
   }
 
-  private fun exportMenteesSadhnaToExcel() {
-    pbMentorLoading.visibility = View.VISIBLE
+  private fun refreshPendingRequestsDirectly() {
+    val mentorUid = currentMentorProfile?.id ?: return
+    Toast.makeText(this, "Refreshing pending requests...", Toast.LENGTH_SHORT).show()
+    val orgId = currentMentorProfile?.organizationId ?: SessionManager.DEFAULT_ORG_ID
+    lifecycleScope.launch {
+      val result = SessionManager.fetchPendingCounsellorRequestsDirectly(mentorUid, orgId)
+      if (result.isSuccess) {
+        val requests = result.getOrNull() ?: emptyList()
+        pendingRequestsList.clear()
+        pendingRequestsList.addAll(requests)
+        updatePendingRequestsUI(requests)
+        Toast.makeText(this@MentorDashboardActivity, "Pending requests refreshed (${requests.size})", Toast.LENGTH_SHORT).show()
+      } else {
+        Toast.makeText(this@MentorDashboardActivity, "Could not refresh requests", Toast.LENGTH_SHORT).show()
+      }
+    }
+  }
 
+  private fun exportMenteesSadhnaToExcel() {
     val mentorProfile = currentMentorProfile ?: SessionManager.getSavedProfile(this)
     val mentorName = mentorProfile?.name ?: "Counsellor"
     val mentorId = mentorProfile?.id ?: "mentor"
@@ -249,7 +353,9 @@ class MentorDashboardActivity : ComponentActivity() {
     lifecycleScope.launch {
       var records = menteesSadhnaRecords.toList()
       if (records.isEmpty()) {
+        pbMentorLoading.visibility = View.VISIBLE
         val directFetch = SessionManager.fetchSadhnaRecordsForMentorDirectly(mentorId)
+        pbMentorLoading.visibility = View.GONE
         if (directFetch.isSuccess) {
           records = directFetch.getOrNull() ?: emptyList()
           menteesSadhnaRecords.clear()
@@ -258,7 +364,6 @@ class MentorDashboardActivity : ComponentActivity() {
       }
 
       if (records.isEmpty()) {
-        pbMentorLoading.visibility = View.GONE
         Toast.makeText(this@MentorDashboardActivity, "No counsellees Sadhna records found in database.", Toast.LENGTH_LONG).show()
         return@launch
       }
@@ -266,27 +371,21 @@ class MentorDashboardActivity : ComponentActivity() {
       val mentorMap = mapOf(mentorId to (mentorProfile ?: UserProfile(id = mentorId, name = mentorName, email = "", role = "mentor")))
       val menteeMap = menteesList.associateBy { it.id }
 
-      try {
-        val excelFile = ExcelExportHelper.generateExcelFile(
-          context = this@MentorDashboardActivity,
-          submissions = records.sortedByDescending { it.date },
-          mentorMap = mentorMap,
-          menteeMap = menteeMap,
-          filePrefix = "Counsellees_Sadhna_HG_${mentorName.replace(" ", "_")}"
-        )
-        val savedPath = ExcelExportHelper.saveExcelToPublicDownloads(this@MentorDashboardActivity, excelFile)
-        pbMentorLoading.visibility = View.GONE
-        showExportSuccessDialog(excelFile, records.size, "Assigned Counsellees (HG $mentorName)", savedPath)
-      } catch (e: Exception) {
-        pbMentorLoading.visibility = View.GONE
-        Toast.makeText(this@MentorDashboardActivity, "Failed to export Excel: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-      }
+      MonthlyExcelExportDialog.show(
+        activity = this@MentorDashboardActivity,
+        allRecords = records,
+        userRole = "mentor",
+        currentUserId = mentorId,
+        currentUserName = mentorName,
+        allDevotees = menteesList,
+        mentorMap = mentorMap,
+        menteeMap = menteeMap,
+        preselectedDevoteeId = null
+      )
     }
   }
 
   private fun exportMentorMySadhnaToExcel() {
-    pbMentorLoading.visibility = View.VISIBLE
-
     val mentorProfile = currentMentorProfile ?: SessionManager.getSavedProfile(this)
     val mentorName = mentorProfile?.name ?: "Counsellor"
     val mentorId = mentorProfile?.id ?: "mentor"
@@ -294,7 +393,9 @@ class MentorDashboardActivity : ComponentActivity() {
     lifecycleScope.launch {
       var records = myOwnSadhnaRecords.toList()
       if (records.isEmpty()) {
+        pbMentorLoading.visibility = View.VISIBLE
         val directFetch = SessionManager.fetchSadhnaRecordsForMenteeDirectly(mentorId)
+        pbMentorLoading.visibility = View.GONE
         if (directFetch.isSuccess) {
           records = directFetch.getOrNull() ?: emptyList()
           myOwnSadhnaRecords.clear()
@@ -303,7 +404,6 @@ class MentorDashboardActivity : ComponentActivity() {
       }
 
       if (records.isEmpty()) {
-        pbMentorLoading.visibility = View.GONE
         Toast.makeText(this@MentorDashboardActivity, "No Sadhna records available to export yet. Please submit your daily sadhna first.", Toast.LENGTH_LONG).show()
         return@launch
       }
@@ -311,21 +411,17 @@ class MentorDashboardActivity : ComponentActivity() {
       val mentorMap = mapOf(mentorId to (mentorProfile ?: UserProfile(id = mentorId, name = mentorName, email = "", role = "mentor")))
       val menteeMap = mapOf(mentorId to (mentorProfile ?: UserProfile(id = mentorId, name = mentorName, email = "", role = "mentor")))
 
-      try {
-        val excelFile = ExcelExportHelper.generateExcelFile(
-          context = this@MentorDashboardActivity,
-          submissions = records.sortedByDescending { it.date },
-          mentorMap = mentorMap,
-          menteeMap = menteeMap,
-          filePrefix = "My_Sadhna_HG_${mentorName.replace(" ", "_")}"
-        )
-        val savedPath = ExcelExportHelper.saveExcelToPublicDownloads(this@MentorDashboardActivity, excelFile)
-        pbMentorLoading.visibility = View.GONE
-        showExportSuccessDialog(excelFile, records.size, "HG $mentorName (My Own Sadhna)", savedPath)
-      } catch (e: Exception) {
-        pbMentorLoading.visibility = View.GONE
-        Toast.makeText(this@MentorDashboardActivity, "Failed to export Excel: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-      }
+      MonthlyExcelExportDialog.show(
+        activity = this@MentorDashboardActivity,
+        allRecords = records,
+        userRole = "mentor",
+        currentUserId = mentorId,
+        currentUserName = mentorName,
+        allDevotees = menteesList,
+        mentorMap = mentorMap,
+        menteeMap = menteeMap,
+        preselectedDevoteeId = mentorId
+      )
     }
   }
 
@@ -480,6 +576,260 @@ class MentorDashboardActivity : ComponentActivity() {
     dialog.window?.setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
     dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
     dialog.show()
+  }
+
+  private fun updatePendingRequestsUI(requests: List<SessionManager.CounsellorRequest>) {
+    updateRequestTabButton()
+    layoutPendingRequestsList.removeAllViews()
+    if (requests.isEmpty()) {
+      if (currentSelectedTab == 0) {
+        layoutMentorSectionPendingRequests.visibility = View.VISIBLE
+        tvPendingRequestsHeader.text = "Pending Counsellee Requests (0)"
+        val emptyTv = TextView(this).apply {
+          text = "No pending counsellee requests at this time."
+          setTextColor(Color.parseColor("#757575"))
+          setPadding(12, 16, 12, 16)
+        }
+        layoutPendingRequestsList.addView(emptyTv)
+      } else {
+        layoutMentorSectionPendingRequests.visibility = View.GONE
+      }
+      return
+    }
+
+    layoutMentorSectionPendingRequests.visibility = View.VISIBLE
+    tvPendingRequestsHeader.text = "Pending Counsellee Requests (${requests.size})"
+
+    for (req in requests) {
+      val card = createPendingRequestCard(req)
+      layoutPendingRequestsList.addView(card)
+    }
+  }
+
+  private fun createPendingRequestCard(req: SessionManager.CounsellorRequest): View {
+    val card = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      setBackgroundColor(Color.WHITE)
+      elevation = 3f
+      setPadding(20, 16, 20, 16)
+      val params = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+      ).apply {
+        setMargins(0, 0, 0, 12)
+      }
+      layoutParams = params
+    }
+
+    // Name & status header
+    val headerRow = LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+      )
+    }
+
+    val nameTv = TextView(this).apply {
+      text = "👤 ${req.counseleeName}"
+      textSize = 15f
+      setTextColor(Color.parseColor("#111111"))
+      setTypeface(null, android.graphics.Typeface.BOLD)
+      layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+    }
+
+    val pendingBadge = TextView(this).apply {
+      text = "PENDING"
+      textSize = 11f
+      setTextColor(Color.parseColor("#C2410C"))
+      setTypeface(null, android.graphics.Typeface.BOLD)
+      setBackgroundColor(Color.parseColor("#FFEDD5"))
+      setPadding(12, 4, 12, 4)
+    }
+
+    headerRow.addView(nameTv)
+    headerRow.addView(pendingBadge)
+    card.addView(headerRow)
+
+    // Email
+    if (req.counseleeEmail.isNotEmpty()) {
+      val emailTv = TextView(this).apply {
+        text = "✉️ ${req.counseleeEmail}"
+        textSize = 12f
+        setTextColor(Color.parseColor("#666666"))
+        setPadding(0, 4, 0, 2)
+      }
+      card.addView(emailTv)
+    }
+
+    // Request Date
+    val dateStr = formatRequestDate(req.createdAt)
+    val dateTv = TextView(this).apply {
+      text = "📅 Request Date: $dateStr"
+      textSize = 12f
+      setTextColor(Color.parseColor("#757575"))
+      setPadding(0, 2, 0, 2)
+    }
+    card.addView(dateTv)
+
+    // Request note
+    val noteTv = TextView(this).apply {
+      text = "Requested to join your counselling group."
+      textSize = 12f
+      setTextColor(Color.parseColor("#444444"))
+      setPadding(0, 2, 0, 10)
+    }
+    card.addView(noteTv)
+
+    // Action buttons row: [ ACCEPT ] and [ DECLINE ]
+    val actionRow = LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      layoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.MATCH_PARENT,
+        LinearLayout.LayoutParams.WRAP_CONTENT
+      )
+    }
+
+    val btnAccept = Button(this).apply {
+      text = "✓ ACCEPT"
+      textSize = 12f
+      setBackgroundColor(Color.parseColor("#2E7D32"))
+      setTextColor(Color.WHITE)
+      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+        rightMargin = 8
+      }
+      layoutParams = p
+      setOnClickListener {
+        confirmAndAcceptRequest(req)
+      }
+    }
+
+    val btnDecline = Button(this).apply {
+      text = "✕ DECLINE"
+      textSize = 12f
+      setBackgroundColor(Color.parseColor("#C62828"))
+      setTextColor(Color.WHITE)
+      val p = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+        leftMargin = 8
+      }
+      layoutParams = p
+      setOnClickListener {
+        confirmAndDeclineRequest(req)
+      }
+    }
+
+    actionRow.addView(btnAccept)
+    actionRow.addView(btnDecline)
+    card.addView(actionRow)
+
+    return card
+  }
+
+  private fun confirmAndAcceptRequest(req: SessionManager.CounsellorRequest) {
+    val mentorUid = currentMentorProfile?.id ?: return
+    AlertDialog.Builder(this)
+      .setTitle("Accept Counsellee")
+      .setMessage("Accept ${req.counseleeName} into your counselling group?")
+      .setPositiveButton("Accept") { _, _ ->
+        pbMentorLoading.visibility = View.VISIBLE
+        lifecycleScope.launch {
+          val result = SessionManager.acceptCounselleeRequest(
+            requestId = req.id,
+            counseleeId = req.counseleeId,
+            counsellorId = mentorUid
+          )
+          pbMentorLoading.visibility = View.GONE
+          if (result.isSuccess) {
+            Toast.makeText(this@MentorDashboardActivity, "${req.counseleeName} has been accepted and connected to your group.", Toast.LENGTH_SHORT).show()
+          } else {
+            Toast.makeText(this@MentorDashboardActivity, "Failed to accept: ${result.exceptionOrNull()?.localizedMessage}", Toast.LENGTH_LONG).show()
+          }
+        }
+      }
+      .setNegativeButton("Cancel", null)
+      .show()
+  }
+
+  private fun confirmAndDeclineRequest(req: SessionManager.CounsellorRequest) {
+    AlertDialog.Builder(this)
+      .setTitle("Decline Request")
+      .setMessage("Are you sure you want to decline the request from ${req.counseleeName}?")
+      .setPositiveButton("Decline") { _, _ ->
+        pbMentorLoading.visibility = View.VISIBLE
+        lifecycleScope.launch {
+          val result = SessionManager.declineCounselleeRequest(req.id)
+          pbMentorLoading.visibility = View.GONE
+          if (result.isSuccess) {
+            Toast.makeText(this@MentorDashboardActivity, "Request declined.", Toast.LENGTH_SHORT).show()
+          } else {
+            Toast.makeText(this@MentorDashboardActivity, "Failed to decline: ${result.exceptionOrNull()?.localizedMessage}", Toast.LENGTH_LONG).show()
+          }
+        }
+      }
+      .setNegativeButton("Cancel", null)
+      .show()
+  }
+
+  private fun showNewCounselleeNotification(counseleeName: String) {
+    try {
+      val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      val channelId = "counsellor_requests_channel"
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+          channelId,
+          "Counsellee Requests",
+          NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+          description = "Notifications for new counsellee join requests"
+        }
+        notificationManager.createNotificationChannel(channel)
+      }
+
+      val intent = Intent(this, MentorDashboardActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+      }
+      val pendingIntent = PendingIntent.getActivity(
+        this,
+        0,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+      )
+
+      val notification = NotificationCompat.Builder(this, channelId)
+        .setSmallIcon(R.mipmap.ic_launcher)
+        .setContentTitle("New Counsellee Request")
+        .setContentText("A new Counsellee has requested to join your counselling group.")
+        .setStyle(NotificationCompat.BigTextStyle().bigText("Devotee $counseleeName has requested to join your counselling group."))
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setAutoCancel(true)
+        .setContentIntent(pendingIntent)
+        .build()
+
+      notificationManager.notify((System.currentTimeMillis() % 10000).toInt(), notification)
+    } catch (e: Exception) {
+      Log.w("MentorDashboard", "Failed to show notification: ${e.message}")
+    }
+  }
+
+  private fun formatRequestDate(timestamp: Any?): String {
+    return when (timestamp) {
+      is com.google.firebase.Timestamp -> {
+        val sdf = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+        sdf.format(timestamp.toDate())
+      }
+      is Long -> {
+        val sdf = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+        sdf.format(Date(timestamp))
+      }
+      is Date -> {
+        val sdf = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+        sdf.format(timestamp)
+      }
+      else -> {
+        val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        sdf.format(Date())
+      }
+    }
   }
 
   private fun createMenteeCard(mentee: UserProfile): View {
@@ -726,7 +1076,7 @@ class MentorDashboardActivity : ComponentActivity() {
 
   private fun performLogout() {
     SessionManager.clearSession(this)
-    val intent = Intent(this, LoginActivity::class.java)
+    val intent = Intent(this, SelectOrganizationActivity::class.java)
     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
     startActivity(intent)
     finish()

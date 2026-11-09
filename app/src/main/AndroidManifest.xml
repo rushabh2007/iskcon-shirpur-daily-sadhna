@@ -5,7 +5,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
@@ -33,6 +32,12 @@
         </activity>
 
         <activity
+            android:name=".SelectOrganizationActivity"
+            android:exported="false"
+            android:label="Select Organisation"
+            android:theme="@style/Theme.MyApplication" />
+
+        <activity
             android:name=".LoginActivity"
             android:exported="false"
             android:label="@string/app_name"
@@ -42,6 +47,12 @@
             android:name=".AdminDashboardActivity"
             android:exported="false"
             android:label="Admin Dashboard"
+            android:theme="@style/Theme.MyApplication" />
+
+        <activity
+            android:name=".SuperAdminDashboardActivity"
+            android:exported="false"
+            android:label="Super Admin Portal"
             android:theme="@style/Theme.MyApplication" />
 
         <activity
@@ -78,6 +89,12 @@
             android:name=".MenteeSubDashboardActivity"
             android:exported="false"
             android:label="Counsellee Sadhna Report"
+            android:theme="@style/Theme.MyApplication" />
+
+        <activity
+            android:name=".SadhnaRemindersActivity"
+            android:exported="false"
+            android:label="Daily Sadhna Reminders"
             android:theme="@style/Theme.MyApplication" />
 
         <activity

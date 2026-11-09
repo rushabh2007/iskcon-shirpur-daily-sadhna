@@ -26,11 +26,6 @@ class SplashActivity : ComponentActivity() {
   private lateinit var layoutSplashFooter: LinearLayout
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-      splashScreen.setOnExitAnimationListener { splashScreenView ->
-        splashScreenView.remove()
-      }
-    }
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_splash)
 
@@ -57,9 +52,9 @@ class SplashActivity : ComponentActivity() {
 
     startSubtleEntranceAnimation()
 
-    // 2.7 seconds splash delay with lifecycle-aware coroutine
+    // Responsive splash delay with lifecycle-aware coroutine
     lifecycleScope.launch {
-      delay(2700L)
+      delay(1200L)
       if (!isFinishing && !isDestroyed) {
         routeToNextScreen()
       }
@@ -122,18 +117,22 @@ class SplashActivity : ComponentActivity() {
   }
 
   private fun routeToNextScreen() {
-    val currentUser = FirebaseAuth.getInstance().currentUser
-    val savedProfile = SessionManager.getSavedProfile(this)
+    try {
+      val currentUser = try { FirebaseAuth.getInstance().currentUser } catch (_: Exception) { null }
+      val savedProfile = SessionManager.getSavedProfile(this)
 
-    if (currentUser != null && savedProfile != null && savedProfile.active) {
-      when (savedProfile.role.lowercase(Locale.getDefault()).trim()) {
-        "admin" -> navigateTo(AdminDashboardActivity::class.java)
-        "mentor" -> navigateTo(MentorDashboardActivity::class.java)
-        "mentee" -> navigateTo(MenteeDashboardActivity::class.java)
-        else -> navigateTo(LoginActivity::class.java)
+      if (currentUser != null && savedProfile != null && savedProfile.active) {
+        when (savedProfile.role.lowercase(Locale.getDefault()).trim()) {
+          "admin" -> navigateTo(AdminDashboardActivity::class.java)
+          "mentor" -> navigateTo(MentorDashboardActivity::class.java)
+          "mentee" -> navigateTo(MenteeDashboardActivity::class.java)
+          else -> navigateTo(SelectOrganizationActivity::class.java)
+        }
+      } else {
+        navigateTo(SelectOrganizationActivity::class.java)
       }
-    } else {
-      navigateTo(LoginActivity::class.java)
+    } catch (_: Exception) {
+      navigateTo(SelectOrganizationActivity::class.java)
     }
   }
 

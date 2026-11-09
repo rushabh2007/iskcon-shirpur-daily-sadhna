@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootMenteeDashboardLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -63,14 +64,27 @@
             </LinearLayout>
 
             <Button
+                android:id="@+id/btnMenteeReminders"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginEnd="6dp"
+                android:backgroundTint="#FFF3E0"
+                android:minHeight="36dp"
+                android:text="🔔 Reminders"
+                android:textColor="#E65100"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <Button
                 android:id="@+id/btnLogout"
                 style="?android:attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="48dp"
+                android:layout_height="36dp"
+                android:minHeight="36dp"
                 android:text="Logout"
                 android:textColor="#C62828"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -107,32 +121,145 @@
                 android:layout_marginVertical="12dp"
                 android:background="#E0E0E0" />
 
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- Assigned Mentor Section (Visible when assigned) -->
+            <LinearLayout
+                android:id="@+id/layoutAssignedMentorDisplay"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="🪷 Assigned Counsellor"
-                android:textColor="#111111"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/tvAssignedMentorName"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="HG Counsellor Name (Loading...)"
-                android:textColor="#1B5E20"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🪷 Assigned Counsellor"
+                    android:textColor="#111111"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/tvAssignedMentorEmail"
-                android:layout_width="wrap_content"
+                <TextView
+                    android:id="@+id/tvAssignedMentorName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="HG Counsellor Name"
+                    android:textColor="#1B5E20"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvAssignedMentorEmail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="counsellor@example.com"
+                    android:textColor="#555555"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Counsellor Request Section (Visible when unassigned or pending/rejected) -->
+            <LinearLayout
+                android:id="@+id/layoutCounsellorRequestSection"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="counsellor@example.com"
-                android:textColor="#555555"
-                android:textSize="12sp" />
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🪷 Counsellor Join Request"
+                        android:textColor="#111111"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvRequestStatusBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="#F3F4F6"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="3dp"
+                        android:text="NOT ASSIGNED"
+                        android:textColor="#4B5563"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btnRefreshCounselleeRequest"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:layout_marginStart="6dp"
+                        android:backgroundTint="#F1F8E9"
+                        android:minHeight="32dp"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="2dp"
+                        android:text="🔄 Refresh"
+                        android:textColor="#2E7D32"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvRequestStatusMessage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Select a counsellor to send a join request."
+                    android:textColor="#555555"
+                    android:textSize="12sp" />
+
+                <!-- Request Form (Visible when no pending request) -->
+                <LinearLayout
+                    android:id="@+id/layoutSendRequestForm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Choose Available Counsellor:"
+                        android:textColor="#424242"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <Spinner
+                        android:id="@+id/spinnerSelectCounsellor"
+                        android:layout_width="match_parent"
+                        android:layout_height="40dp"
+                        android:layout_marginTop="4dp"
+                        android:background="@android:drawable/btn_dropdown" />
+
+                    <Button
+                        android:id="@+id/btnSendJoinRequest"
+                        android:layout_width="match_parent"
+                        android:layout_height="42dp"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="#00695C"
+                        android:text="📩 SEND JOIN REQUEST"
+                        android:textColor="#FFFFFF"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/pbRequestActionLoading"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="8dp"
+                    android:indeterminateTint="#00695C"
+                    android:visibility="gone" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- SADHNA HISTORY SECTION -->
